@@ -48,11 +48,7 @@ uint8_t LOCAL_DEVICE_ADDR = FLASH_CFG_DEFAULT_ADDR;
 uint16_t g_cfg_freq_hz = FLASH_CFG_DEFAULT_FREQ;
 uint16_t g_cfg_points  = FLASH_CFG_DEFAULT_POINTS;
 uint16_t wave_points = FLASH_CFG_DEFAULT_POINTS;
-//通信结构
-uint16_t  Reg[50];
-FlagStatus Coil[50];
-FlagStatus Discrete_Inputs[50];
-static uint8_t testData[] = "Test data\r\n";
+
 //组态结构体
 Config_t device_config;
 //Z_ADC
@@ -123,7 +119,6 @@ void Uart3_RxStart(void)
     __HAL_UART_CLEAR_IDLEFLAG(&huart3);          // 清一次 IDLE 残留 
     __HAL_UART_ENABLE_IT(&huart3, UART_IT_IDLE);    
 		HAL_UART_Receive_DMA(&huart3, rx_dma_buf, RX_DMA_BUF_SZ);
-//	  __HAL_DMA_DISABLE_IT(huart3.hdmarx, DMA_IT_HT);             
 }
 
 uint32_t get_wr_z(void)
@@ -162,81 +157,6 @@ void Stop_ADC_DMA(void)
 		flag_Z  = 0;
 }
 
-void fill_bias_only(void)
-{
-    float fs_Hz = Z_Sample_freq;    // 采样率，可改
-    float f_carrier  = 10000.0f;      // 正弦频率 Hz，可改
-	  float f_env = 100.0f;
-    float A   = 2.0f;       // 正弦峰值 2 g，可改
-
-    for (int n = 0; n < FFT_N_Z; n++) {
-        float t = (float)n / fs_Hz;
-        // 生成零均值正弦，加速度值 (g)
-//        float xg = A * sinf(2.0f * M_PI * f_carrier * t);
-			float env = 1.0f + 0.5f * sinf(2*M_PI*f_env*t);   // 包络调制
-			float xg = A * env * sinf(2*M_PI*f_carrier*t);    // 调幅信号
-
-        // 转换成 ADC 码
-        float v = Z_REF_VOLTAGE_BIAS + xg  * Z_SENSITIVITY; // 电压
-        if (v < 0) v = 0;
-        if (v > Z_REF_VOLTAGE) v = Z_REF_VOLTAGE;
-
-        ADC_Buffer_Z[n] = (uint16_t)((v * (65535.0f / Z_REF_VOLTAGE)) + 0.5f);
-    }
-}
-static inline uint16_t XY_g_to_code(float g)
-{
-    float v = XY_REF_VOLTAGE_BIAS + g * XY_SENSITIVITY;   // 电压
-    if (v < 0) v = 0;
-    if (v > XY_REF_VOLTAGE) v = XY_REF_VOLTAGE;
-
-    return (uint16_t)(v * (XY_ADC_RESOLUTION / XY_REF_VOLTAGE) + 0.5f);
-}
-void fill_sine_xy(float A_x, float f_x,
-                  float A_y, float f_y,
-                  float fs_Hz)
-{
-    for (int n = 0; n < FFT_N_XY; n++) {
-        float t = (float)n / fs_Hz;
-
-        // 生成零均值纯正弦
-        float gx = A_x * sinf(2.0f * M_PI * f_x * t);
-        float gy = A_y * sinf(2.0f * M_PI * f_y * t);
-
-        ADC_Buffer_XY[2*n]     = XY_g_to_code(gx);
-        ADC_Buffer_XY[2*n + 1] = XY_g_to_code(gy);
-    }
-}
-static void ADC1_DMA_Start(void){
-    // H7 必须校准
-    HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
-
-    // DMA 循环启动（CubeMX: ADC1 连续转换=Enabled，外部触发=None，DMA=Circular）
-    HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADC_Buffer_Z, FFT_N_Z);
-}
-
-//static void dump_states(const char *tag)
-//{
-//    uint32_t cr   = hadc1.Instance->CR;     // ADC 控制寄存器
-//    uint32_t isr  = hadc1.Instance->ISR;    // ADC 状态寄存器
-//    uint16_t ndtr = __HAL_DMA_GET_COUNTER(hadc1.DMA_Handle);
-
-//    printf("[%s] NDTR=%u  ADC.CR=0x%08lx  ADC.ISR=0x%08lx ",
-//           tag, ndtr, (unsigned long)cr, (unsigned long)isr);
-//}
-//void adc_dma_smoketest(void)
-//{
-//    HAL_StatusTypeDef st;
-//    st = HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
-//    printf("Calib=%d\r\n", st);
-//    st = HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADC_Buffer_Z, FFT_N_Z);
-//    printf("StartDMA=%d  Req=%lu\r\n", st, (unsigned long)hadc1.DMA_Handle->Init.Request);
-//    dump_states("after StartDMA");
-//    for (int i = 0; i < 20; ++i) {
-//        HAL_Delay(100);
-//        dump_states("poll");
-//    }
-//}
 /* USER CODE END 0 */
 
 /**
@@ -283,9 +203,6 @@ int main(void)
   /* USER CODE BEGIN 2 */
 	//使能串口中断和接收
 	Uart3_RxStart();
-//	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADC_Buffer_Z, FFT_N_Z);
-//	fill_bias_only();
-//	fill_sine_xy(2.0f, 130.0f,1.0f, 200.0f,Z_Sample_freq);
 	App_ConfigInit();
 	Vib_Filter_Init();
 	Ds18b20_Init();

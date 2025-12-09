@@ -32,18 +32,18 @@
   #define ADS_LSB_2_g   ( (Z_REF_VOLTAGE / 256.0f) / (32768.0f * Z_SENSITIVITY) )
 #endif
 
-// ÓÃÓÚ´æ´¢Ã¿¸öÖáµÄÌØÕ÷Öµ
+// ç”¨äºå­˜å‚¨æ¯ä¸ªè½´çš„ç‰¹å¾å€¼
 typedef struct
 {
-    float mean;                // ¾ùÖµ£¨4×Ö½Ú£©
-    float rms;                 // RMS£¨4×Ö½Ú£©
-    float pp;                  // ·å-·åÖµ£¨4×Ö½Ú£©
-		float kurt;								 // ÇÍ¶È£¨4×Ö½Ú£©
-		float peakFreq;						 // Ö÷·åÆµÂÊ£¨4×Ö½Ú£©
-		float peakAmp;					   // Ö÷Æµ·ùÖµ£¨4×Ö½Ú£©
-		float amp2x;							 // 2x×ªÆµ·ùÖµ£¨4×Ö½Ú£©
-    float envelope_vrms;       // °üÂçÓĞĞ§Öµ£¨4×Ö½Ú£©
-    float envelope_peak;       // °üÂç·åÖµ£¨4×Ö½Ú£©
+    float mean;                // å‡å€¼ï¼ˆ4å­—èŠ‚ï¼‰
+    float rms;                 // RMSï¼ˆ4å­—èŠ‚ï¼‰
+    float pp;                  // å³°-å³°å€¼ï¼ˆ4å­—èŠ‚ï¼‰
+		float kurt;								 // å³­åº¦ï¼ˆ4å­—èŠ‚ï¼‰
+		float peakFreq;						 // ä¸»å³°é¢‘ç‡ï¼ˆ4å­—èŠ‚ï¼‰
+		float peakAmp;					   // ä¸»é¢‘å¹…å€¼ï¼ˆ4å­—èŠ‚ï¼‰
+		float amp2x;							 // 2xè½¬é¢‘å¹…å€¼ï¼ˆ4å­—èŠ‚ï¼‰
+    float envelope_vrms;       // åŒ…ç»œæœ‰æ•ˆå€¼ï¼ˆ4å­—èŠ‚ï¼‰
+    float envelope_peak;       // åŒ…ç»œå³°å€¼ï¼ˆ4å­—èŠ‚ï¼‰
 } AxisFeatureValue;
 extern AxisFeatureValue X_data,Y_data,Z_data;
 extern float Temp; 

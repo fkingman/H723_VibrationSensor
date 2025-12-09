@@ -71,6 +71,12 @@ virtualFolder:
         - path: ../ICode/bytes.h
         - path: ../ICode/app_acq.c
         - path: ../ICode/modbus_rtu.c
+        - path: ../ICode/app_acq.h
+        - path: ../ICode/delay.h
+        - path: ../ICode/Eigenvalue calculation.h
+        - path: ../ICode/flash.h
+        - path: ../ICode/modbus_rtu.h
+        - path: ../ICode/Ds18b20.h
       folders: []
     - name: ::CMSIS
       files: []

@@ -20,8 +20,6 @@ static arm_biquad_casd_df1_inst_f32 IIR_HP, IIR_NOTCH;
 
 float32_t hannWin[FFT_N_Z]; 
 
-FeatureValuePacket fvp;
-WaveformPacket wfp;
 AxisFeatureValue X_data,Y_data,Z_data;
 
 float32_t xBuf[FFT_N_XY];  // 存储 X 方向的加速度数据
@@ -706,7 +704,7 @@ void Fill_Z_AxisFeatureValue(AxisFeatureValue *axis_data, float mean, float rms,
     axis_data->rms = rms;              
     axis_data->pp = pp;                 
     axis_data->kurt = kurt;               
-		axis_data->peakFreq = peakFreq;         
+	axis_data->peakFreq = peakFreq;         
     axis_data->peakAmp = peakAmp;          
     axis_data->amp2x = amp2x;   
     axis_data->envelope_vrms = envelope_vrms;  
@@ -715,10 +713,11 @@ void Fill_Z_AxisFeatureValue(AxisFeatureValue *axis_data, float mean, float rms,
 
 void print_FEATURE()
 {
-		printf("meanX = %.3f g  meanY = %.3f g\r\n", meanX, meanY);
-		printf("RMS_X = %.3f g  RMS_Y = %.3f g\r\n", rmsX, rmsY);
-		printf("Peak-Peak X = %.3f g  Peak-Peak Y = %.3f g\r\n", ppX, ppY);
-		printf("Kurt_X = %.3f     Kurt_Y = %.3f\r\n", kurtX, kurtY);//    printf("mean       = %.5f g\r\n", meanZ);
+	printf("meanX = %.3f g  meanY = %.3f g\r\n", meanX, meanY);
+	printf("RMS_X = %.3f g  RMS_Y = %.3f g\r\n", rmsX, rmsY);
+	printf("Peak-Peak X = %.3f g  Peak-Peak Y = %.3f g\r\n", ppX, ppY);
+	printf("Kurt_X = %.3f     Kurt_Y = %.3f\r\n", kurtX, kurtY);    
+    printf("mean       = %.5f g\r\n", meanZ);
     printf("RMS        = %.5f g\r\n", rmsZ);
     printf("Peak-Peak  = %.5f g\r\n", ppZ);
     printf("Kurtosis   = %.5f\r\n",   kurtZ); 
@@ -729,250 +728,22 @@ void print_FEATURE()
 	
 void Process_Data()
 {	  
-		FFT_Init();
-		// XY mean RMS Peak-Peak 
+	FFT_Init();
+	// XY mean RMS Peak-Peak 
     XY_Ha_Feature_Calc((uint16_t *)ADC_Buffer_XY, FFT_N_XY);
-		// XY Vrms displacementX 
-//		accelerate_XY_Vrms_calc(4000.0f / (float32_t)FFT_N_XY);
-//		printf("XY OK!\r\n");
-		// Z  mean RMS Peak-Peak Kurtosis
-		Z_Ha_Feature_Calc(ADC_Buffer_Z,FFT_N_Z);
+	// Z  mean RMS Peak-Peak Kurtosis
+	Z_Ha_Feature_Calc(ADC_Buffer_Z,FFT_N_Z);
     // Z peakFreq peakAmp amp2x 
-		Z_Freq_Feature_Calc(ADC_Buffer_Z, Z_Sample_freq, FFT_N_Z, &peakFreq, &peakAmp, &amp2x, fr);
-		// Z  包络有效值（Vrms） 和 包络峰值（Peak）
+	Z_Freq_Feature_Calc(ADC_Buffer_Z, Z_Sample_freq, FFT_N_Z, &peakFreq, &peakAmp, &amp2x, fr);
+	// Z  包络有效值（Vrms） 和 包络峰值（Peak）
     Enve_Feature_Calc(ADC_Buffer_Z, FFT_N_Z);
-		Temp = Tempetature_Dis();
-//		printf("Z OK!\r\n");
-	 // 总值数据赋值
-		Fill_XY_AxisFeatureValue(&X_data, meanX, rmsX, ppX, kurtX);
-		Fill_XY_AxisFeatureValue(&Y_data, meanY, rmsY, ppY, kurtY);
-		Fill_Z_AxisFeatureValue(&Z_data, meanZ, rmsZ, ppZ, kurtZ, peakFreq, peakAmp, amp2x, envelopeVrmsZ, envelopePeakZ);
+	Temp = Tempetature_Dis();
+	// 总值数据赋值
+	Fill_XY_AxisFeatureValue(&X_data, meanX, rmsX, ppX, kurtX);
+	Fill_XY_AxisFeatureValue(&Y_data, meanY, rmsY, ppY, kurtY);
+	Fill_Z_AxisFeatureValue(&Z_data, meanZ, rmsZ, ppZ, kurtZ, peakFreq, peakAmp, amp2x, envelopeVrmsZ, envelopePeakZ);
 }
 
-void Fill_WaveformPacket(WaveformPacket *wfp)
-{
-		wfp->header[0] = 0xAA;  
-    wfp->header[1] = 0x55;
-
-	  wfp->msg_type = 0x03;//0x01 温度、0x02 振动、0x03波形
-    wfp->channel = 1;  // 通道 1
-//    wfp->total_package =1;
-		for (int i = 0; i < 1024; ++i)
-    {
-        wfp->X[i] = ADC_Buffer_Z[i];  // 填充示例数据
-    }
-		
-	// 填充采样率
-    wfp->Sample_Rate[0] = 0x10;  // 采样率的高字节
-    wfp->Sample_Rate[1] = 0x20;  // 采样率的低字节
-     
-		// 设置报文尾（固定）
-    wfp->footer[0] = 0xA5;
-    wfp->footer[1] = 0xA5;
-}
-
-void freq_harmonic_amp_f_phase_calc(float rotate_speed_f, uint32_t fs_Hz, const uint32_t fft_points, 
-                                     float32_t *z_mag, float32_t *z_phase) 
-{ 
-    float32_t base_freq = rotate_speed_f;  // 基础旋转频率，单位：Hz
-    float32_t harmonic_freq, harmonic_amp, harmonic_phase;
-
-    // 检查所有频率分量
-    for (uint32_t i = 1; i < fft_points / 2; i++) {
-        // 计算当前频率
-        float32_t freq = (float32_t)i * fs_Hz / (float32_t)fft_points;
-
-        // 判断该频率是否接近谐波频率（基频的整数倍）
-        for (uint32_t n = 1; n <= 5; ++n) {  // 假设最多计算前 5 个谐波
-            harmonic_freq = n * base_freq;
-            if (fabsf(freq - harmonic_freq) < (fs_Hz / (float32_t)fft_points)) {
-                // 计算该频率点的幅值和相位
-                harmonic_amp = z_mag[i];
-                harmonic_phase = z_phase[i];
-
-                // 打印或存储结果
-                printf("Harmonic %u: Frequency = %.2f Hz, Amplitude = %.2f, Phase = %.2f degrees\n",
-                       n, harmonic_freq, harmonic_amp, harmonic_phase);
-            }
-        }
-    }
-}
-
-void freq_bearing_failure_amp_f_phase_calc(float rotate_speed_f, uint32_t fs_Hz, const uint32_t fft_points, 
-                                           float32_t *z_mag, float32_t *z_phase) 
-{
-    float32_t base_freq = rotate_speed_f / 60.0f;  // 转速转换为转速频率（Hz）
-
-    // 假设以下为轴承参数，实际值需根据实际情况确定
-    uint32_t n = 8;  // 滚动体数
-    float32_t D = 0.1f;  // 内外圈直径，单位米
-    float32_t d = 0.02f;  // 滚动体直径，单位米
-
-    // 计算轴承故障频率
-    float32_t BPFO = (n / 2.0f) * base_freq * (1 - d / D);  // 外圈故障频率
-    float32_t BPFI = (n / 2.0f) * base_freq * (1 + d / D);  // 内圈故障频率
-
-    printf("Bearing Fault Frequencies:\n");
-    printf("BPFO: %.2f Hz, BPFI: %.2f Hz\n", BPFO, BPFI);
-
-    // 检查频率分量是否接近轴承故障频率
-    for (uint32_t i = 1; i < fft_points / 2; i++) {
-        float32_t freq = (float32_t)i * fs_Hz / (float32_t)fft_points;
-
-        // 如果频率接近外圈故障频率（BPFO）
-        if (fabsf(freq - BPFO) < (fs_Hz / (float32_t)fft_points)) {
-            printf("BPFO Frequency = %.2f Hz, Amplitude = %.2f, Phase = %.2f degrees\n",
-                   freq, z_mag[i], z_phase[i]);
-        }
-        // 如果频率接近内圈故障频率（BPFI）
-        if (fabsf(freq - BPFI) < (fs_Hz / (float32_t)fft_points)) {
-            printf("BPFI Frequency = %.2f Hz, Amplitude = %.2f, Phase = %.2f degrees\n",
-                   freq, z_mag[i], z_phase[i]);
-        }
-    }
-}
-
-void freq_gear_engagement_and_sideband_amp_f_phase_calc(float rotate_speed_f, uint32_t fs_Hz, uint32_t fft_points, 
-                                                         float32_t *z_mag, float32_t *z_phase) 
-{
-    float32_t base_freq = rotate_speed_f / 60.0f;  // 转速转换为转速频率（Hz）
-
-    // 假设齿轮的齿数为 Z
-    uint32_t Z = 15;  // 齿轮齿数，实际值根据具体情况设置
-
-    // 计算齿轮啮合频率
-    float32_t gear_freq = base_freq * Z;
-
-    // 检查频率分量是否接近齿轮啮合频率
-    for (uint32_t i = 1; i < fft_points / 2; i++) {
-        float32_t freq = (float32_t)i * fs_Hz / (float32_t)fft_points;
-
-        // 如果频率接近齿轮啮合频率（GEAR）
-        if (fabsf(freq - gear_freq) < (fs_Hz / (float32_t)fft_points)) {
-            printf("Gear Engagement Frequency = %.2f Hz, Amplitude = %.2f, Phase = %.2f degrees\n",
-                   gear_freq, z_mag[i], z_phase[i]);
-        }
-
-        // 检查侧带频率（可以是齿轮频率的上下侧带）
-        float32_t sideband_up = gear_freq + base_freq;
-        float32_t sideband_down = gear_freq - base_freq;
-
-        if (fabsf(freq - sideband_up) < (fs_Hz / (float32_t)fft_points)) {
-            printf("Sideband Frequency (up) = %.2f Hz, Amplitude = %.2f, Phase = %.2f degrees\n",
-                   sideband_up, z_mag[i], z_phase[i]);
-        }
-        if (fabsf(freq - sideband_down) < (fs_Hz / (float32_t)fft_points)) {
-            printf("Sideband Frequency (down) = %.2f Hz, Amplitude = %.2f, Phase = %.2f degrees\n",
-                   sideband_down, z_mag[i], z_phase[i]);
-        }
-    }
-}
-
-void vibration_intensity_calc(float32_t Z_rms_g) 
-{
-    // 振动烈度计算通常是基于 RMS 值，下面假设根据某个公式计算烈度
-    float32_t vibration_intensity;
-
-    // 假设烈度和 RMS 值的关系是直接的（例如，单位调整等）
-    // 振动烈度可以通过一个经验公式来计算，这里假设直接使用 RMS
-    vibration_intensity = Z_rms_g;
-
-    // 打印振动烈度结果（可以根据需要存储或进一步处理）
-    printf("Vibration Intensity (RMS) = %.2f g\n", vibration_intensity);
-
-    // 可以根据需要将振动烈度存储到某个变量或返回值
-    // 例如，存储到全局变量：
-    // global_vibration_intensity = vibration_intensity;
-}
-
-void displacement_pp_value_calc(float32_t *z_mag, uint32_t fs_Hz, uint32_t fft_points) 
-{
-    float32_t max_value = 0.0f;
-    float32_t min_value = 3.4e38f; // 初始为非常大的值，表示最小值的初始状态
-
-    // 遍历幅值数组，找出最大值和最小值
-    for (uint32_t i = 0; i < fft_points / 2; ++i) { // 遍历频域数据的正频率部分
-        float32_t mag = z_mag[i];
-
-        // 更新最大值和最小值
-        if (mag > max_value) {
-            max_value = mag;
-        }
-        if (mag < min_value) {
-            min_value = mag;
-        }
-    }
-
-    // 计算峰-峰值（Peak-to-Peak）
-    float32_t displacement_pp_value = max_value - min_value;
-
-    // 输出位移峰-峰值
-    printf("Z Axis Displacement Peak-to-Peak Value = %.2f\n", displacement_pp_value);
-
-    // 可以根据需要将结果存储到某个全局变量或进一步处理
-    // global_displacement_pp_value = displacement_pp_value;
-}
-
-void enve_harmonic_amp_f_phase_calc(float32_t *z_mag, float32_t *z_phase, 
-                                     float rotate_speed, uint32_t fs_Hz, uint32_t fft_points)
-{
-    float32_t base_freq = rotate_speed / 60.0f;  // 转速转换为转速频率（Hz）
-    float32_t harmonic_freq, harmonic_amp, harmonic_phase;
-
-    // 检查所有频率分量
-    for (uint32_t i = 1; i < fft_points / 2; i++) {
-        // 计算当前频率
-        float32_t freq = (float32_t)i * fs_Hz / (float32_t)fft_points;
-
-        // 判断该频率是否接近谐波频率（基频的整数倍）
-        for (uint32_t n = 1; n <= 5; ++n) {  // 假设最多计算前 5 个谐波
-            harmonic_freq = n * base_freq;
-            if (fabsf(freq - harmonic_freq) < (fs_Hz / (float32_t)fft_points)) {
-                // 计算该频率点的幅值和相位
-                harmonic_amp = z_mag[i];
-                harmonic_phase = z_phase[i];
-
-                // 打印或存储结果
-                printf("Envelope Harmonic %u: Frequency = %.2f Hz, Amplitude = %.2f, Phase = %.2f degrees\n",
-                       n, harmonic_freq, harmonic_amp, harmonic_phase);
-            }
-        }
-    }
-}
-
-void enve_bearing_failure_amp_f_phase_calc(float32_t *z_mag, float32_t *z_phase, 
-                                           float rotate_speed, uint32_t fs_Hz, uint32_t fft_points)
-{
-    float32_t base_freq = rotate_speed / 60.0f;  // 转速转换为转速频率（Hz）
-
-    // 假设以下为轴承参数，实际值需根据实际情况确定
-    uint32_t n = 8;  // 滚动体数
-    float32_t D = 0.1f;  // 内外圈直径，单位米
-    float32_t d = 0.02f;  // 滚动体直径，单位米
-
-    // 计算轴承故障频率
-    float32_t BPFO = (n / 2.0f) * base_freq * (1 - d / D);  // 外圈故障频率
-    float32_t BPFI = (n / 2.0f) * base_freq * (1 + d / D);  // 内圈故障频率
-
-    printf("Envelope Bearing Fault Frequencies:\n");
-    printf("BPFO: %.2f Hz, BPFI: %.2f Hz\n", BPFO, BPFI);
-
-    // 检查频率分量是否接近轴承故障频率
-    for (uint32_t i = 1; i < fft_points / 2; i++) {
-        float32_t freq = (float32_t)i * fs_Hz / (float32_t)fft_points;
-
-        // 如果频率接近外圈故障频率（BPFO）
-        if (fabsf(freq - BPFO) < (fs_Hz / (float32_t)fft_points)) {
-            printf("BPFO Frequency = %.2f Hz, Amplitude = %.2f, Phase = %.2f degrees\n",
-                   freq, z_mag[i], z_phase[i]);
-        }
-        // 如果频率接近内圈故障频率（BPFI）
-        if (fabsf(freq - BPFI) < (fs_Hz / (float32_t)fft_points)) {
-            printf("BPFI Frequency = %.2f Hz, Amplitude = %.2f, Phase = %.2f degrees\n",
-                   freq, z_mag[i], z_phase[i]);
-        }
-    }
-}
 
 
 

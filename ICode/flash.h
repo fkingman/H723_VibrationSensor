@@ -10,38 +10,38 @@
 typedef struct __attribute__((packed,aligned(4))) {
     uint32_t magic;        // 0xA5A55A5A
     uint8_t  version;      // 
-    uint8_t  addr;         // Éè±¸µØÖ·
+    uint8_t  addr;         // è®¾å¤‡åœ°å€
     uint16_t samp_freq_hz; // 
     uint16_t points;       // 
-    uint8_t  rsv[20];      // ÌîÂúµ½ 32B
-    uint16_t crc;          // crc16(modbus) ¸²¸ÇÇ° 30B
+    uint8_t  rsv[20];      // å¡«æ»¡åˆ° 32B
+    uint16_t crc;          // crc16(modbus) è¦†ç›–å‰ 30B
 } flash_dev_cfg_t;
 
 #define FLASH_CFG_MAGIC         0xA5A55A5Au
 #define FLASH_CFG_DEFAULT_ADDR  0x00
-#define FLASH_CFG_DEFAULT_FREQ    51200u       // Ä¬ÈÏ²ÉÑùÂÊ
-#define FLASH_CFG_DEFAULT_POINTS  4096u        // Ä¬ÈÏµãÊı
+#define FLASH_CFG_DEFAULT_FREQ    51200u       // é»˜è®¤é‡‡æ ·ç‡
+#define FLASH_CFG_DEFAULT_POINTS  4096u        // é»˜è®¤ç‚¹æ•°
 
 
-#define FLASH_CFG_BANK          FLASH_BANK_1        // ½¨ÒéÓÃ¿ÕÏĞµÄ Bank
-#define FLASH_CFG_SECTOR        FLASH_SECTOR_7      // ¸Ã Bank µÄ×îºóÒ»¸öÉÈÇøÊ¾Àı
-#define FLASH_CFG_BASE_ADDR     ((uint32_t)0x080FFFE0u) // ÉÈÇøÆğÊ¼µØÖ·Ê¾Àı
+#define FLASH_CFG_BANK          FLASH_BANK_1        // å»ºè®®ç”¨ç©ºé—²çš„ Bank
+#define FLASH_CFG_SECTOR        FLASH_SECTOR_7      // è¯¥ Bank çš„æœ€åä¸€ä¸ªæ‰‡åŒºç¤ºä¾‹
+#define FLASH_CFG_BASE_ADDR     ((uint32_t)0x080FFFE0u) // æ‰‡åŒºèµ·å§‹åœ°å€ç¤ºä¾‹
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* ¶ÁÈ¡È«²¿ÅäÖÃ¡£ÈÎÒâ²ÎÊı¿É´« NULL ±íÊ¾²»¹ØĞÄ */
+/* è¯»å–å…¨éƒ¨é…ç½®ã€‚ä»»æ„å‚æ•°å¯ä¼  NULL è¡¨ç¤ºä¸å…³å¿ƒ */
 void Flash_ReadConfig(uint8_t* out_addr, uint16_t* out_freq, uint16_t* out_points);
 
-/* Ğ´ÈëÈ«²¿ÅäÖÃ£¨Ò»´Î²ÁĞ´£©¡£ÈÎÒâ×Ö¶ÎÌîĞ´Æäµ±Ç°Öµ±ÜÃâ¸²¸Ç */
+/* å†™å…¥å…¨éƒ¨é…ç½®ï¼ˆä¸€æ¬¡æ“¦å†™ï¼‰ã€‚ä»»æ„å­—æ®µå¡«å†™å…¶å½“å‰å€¼é¿å…è¦†ç›– */
 HAL_StatusTypeDef Flash_WriteConfig(uint8_t addr, uint16_t freq, uint16_t points);
 
-/* ¼æÈİ¾É½Ó¿Ú£¨µØÖ·¶ÁĞ´£© */
+/* å…¼å®¹æ—§æ¥å£ï¼ˆåœ°å€è¯»å†™ï¼‰ */
 uint8_t Flash_ReadDeviceAddr(void);
 HAL_StatusTypeDef Flash_WriteDeviceAddr(uint8_t new_addr);
 
-/* ±ã½İ¸üĞÂ£¨Ö»¸ÄÒ»¸ö×Ö¶Î£¬ÄÚ²¿»á¶Á-¸Ä-Ğ´£© */
+/* ä¾¿æ·æ›´æ–°ï¼ˆåªæ”¹ä¸€ä¸ªå­—æ®µï¼Œå†…éƒ¨ä¼šè¯»-æ”¹-å†™ï¼‰ */
 HAL_StatusTypeDef Flash_UpdateFreq(uint16_t new_freq);
 HAL_StatusTypeDef Flash_UpdatePoints(uint16_t new_points);
 

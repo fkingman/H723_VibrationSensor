@@ -70,20 +70,6 @@ static HAL_StatusTypeDef uart3_send_dma(uint8_t *buf, uint16_t len)
     return HAL_UART_Transmit_DMA(&huart3, buf, len);
 }
 
-//void Protocol_SendNack(uint8_t dev_id, uint8_t cmd, PktStatus_t err)
-//{
-//    uint8_t tx[9];
-//    uint8_t *p = tx;
-
-//    *p++ = dev_id;
-//    *p++ = cmd;
-//    *p++ = 0xEE;                 
-//    *p++ = (uint8_t)err;         
-//    *p++ = PKT_FOOT_H;
-//    *p++ = PKT_FOOT_L;
-//	
-//    HAL_UART_Transmit_DMA(&huart3, tx, sizeof(tx));
-//}
 /**********************************特征值应答**********************************/
 static void send_feature_pkt(uint8_t dev_id,
                               const AxisFeatureValue *X_data,
