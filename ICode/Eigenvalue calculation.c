@@ -6,7 +6,6 @@ uint32_t flag_cal_speed=0;
 #define fr  50.0f   // 转速为 50 Hz 
 #define CFFT_PTR_T  const arm_cfft_instance_f32*
 
-static void integral_bandpass(float32_t *buf, float32_t fs, uint32_t N);
 static arm_cfft_instance_f32 cfftInst;
 static arm_cfft_radix4_instance_f32 S_CFFT;
 static arm_rfft_fast_instance_f32 S_rfft;
@@ -26,10 +25,7 @@ float32_t xBuf[FFT_N_XY];  // 存储 X 方向的加速度数据
 float32_t yBuf[FFT_N_XY];  // 存储 Y 方向的加速度数据
 float32_t zBuf[FFT_N_Z];  // 存储 Y 方向的加速度数据
 
-static float32_t meanX, meanY, rmsX, rmsY, ppX, ppY, X_Vrms, Y_Vrms, kurtX, kurtY;// XY特征值
-float32_t displacementX[FFT_N_XY] = {0};  // X方向的位移
-float32_t displacementY[FFT_N_XY] = {0};  // Y方向的位移
-	
+static float32_t meanX, meanY, rmsX, rmsY, ppX, ppY, X_Vrms, Y_Vrms, kurtX, kurtY;// XY特征值	
 static float32_t meanZ, rmsZ, ppZ, kurtZ, envelopeVrmsZ, envelopePeakZ;// Z特征值
 float32_t dppZ;
 float32_t peak_value,std, fgf, skewness_factor;
@@ -53,10 +49,6 @@ float* getZBuf(void)
 	return zBuf; 
 }
 
-//void Window_Init(void)
-//{
-//    arm_hann_window_f32(hannWin, FFT_N_Z);
-//}
 
 void Vib_Filter_Init(void)
 {
@@ -141,13 +133,7 @@ void print_TEMP()
 	    Temp = Tempetature_Dis();
 			printf("Temp is: %.1f°C\n", Temp);
 }
-/*
-统计 X / Y 轴时域特征
-· 均值  (meanX / meanY)          —— 监控零漂
-· 有效值 (rmsX  / rmsY)          —— 振动烈度 
-· 峰-峰值 (ppX  / ppY)           —— 冲击幅度
-· 峭度  (kurtX / kurtY)          —— 冲击/轴承早期故障灵敏 
-*/
+
 void XY_Ha_Feature_Calc(uint16_t *XY_Data, uint32_t FFT_N)
 {
 
@@ -217,108 +203,6 @@ void XY_Ha_Feature_Calc(uint16_t *XY_Data, uint32_t FFT_N)
 
 }
 
-/*
- * @brief  对 X/Y 加速度做 FFT→积分→带通→IFFT，并计算速度 Vrms
- */
-void accelerate_XY_Vrms_calc(float32_t resolu)
-{
-    if (!cfftInitDone)
-    {
-        // 初始化 FFT
-        arm_cfft_radix4_init_f32((arm_cfft_radix4_instance_f32 *)&cfftInst, FFT_N_XY, 0, 1);
-        cfftInitDone = 1;
-    }
-
-    const float32_t fs = 1.0f / resolu;
-    float32_t sumSquares;
-    X_Vrms = 0.0f;
-    Y_Vrms = 0.0f;
-
-		static float32_t fftBuf[2 * FFT_N_XY];    // 临时缓冲区fftBuf用于存储处理数据
-
-		// 速度和位移缓冲区
-    float32_t velocityX[FFT_N_XY] = {0};  // X方向的速度
-    float32_t velocityY[FFT_N_XY] = {0};  // Y方向的速度
-		
-    // 一次性计算 X 轴 Vrms
-    for (uint32_t i = 0; i < FFT_N_XY; ++i)
-    {
-        fftBuf[2*i]   = ADC_Buffer_XY[2 * i];
-        fftBuf[2*i+1] = 0.0f;
-    }
-    arm_cfft_f32(&cfftInst, fftBuf, 0, 1);  // FFT 变换
-    integral_bandpass(fftBuf, fs, FFT_N_XY);  // 带通滤波
-    arm_cfft_f32(&cfftInst, fftBuf, 1, 1);  // IFFT 变换
-    arm_power_f32(fftBuf, 2 * FFT_N_XY, &sumSquares);  // 计算功率
-    X_Vrms = sqrtf(sumSquares / FFT_N_XY) * 9.80665f * 1000.0f;
-		
-		// X加速度的积分
-    for (uint32_t i = 0; i < FFT_N_XY; ++i)
-    {
-        velocityX[i] = ADC_Buffer_XY[2 * i] * fs;  
-    }
-
-    // X速度积分
-    for (uint32_t i = 1; i < FFT_N_XY; ++i)
-    {
-        displacementX[i] = displacementX[i-1] + velocityX[i] * fs;  
-    }
-		
-    //  Y 轴 Vrms
-    for (uint32_t i = 0; i < FFT_N_XY; ++i)
-    {
-        fftBuf[2*i]   = ADC_Buffer_XY[2 * i + 1];
-        fftBuf[2*i+1] = 0.0f;
-    }
-    arm_cfft_f32(&cfftInst, fftBuf, 0, 1);  // FFT 变换
-    integral_bandpass(fftBuf, fs, FFT_N_XY);  // 带通滤波
-    arm_cfft_f32(&cfftInst, fftBuf, 1, 1);  // IFFT 变换
-    arm_power_f32(fftBuf, 2 * FFT_N_XY, &sumSquares);  // 计算功率
-    Y_Vrms = sqrtf(sumSquares / FFT_N_XY) * 9.80665f * 1000.0f;
-		
-		// 计算Y方向的速度（加速度的积分）
-    for (uint32_t i = 0; i < FFT_N_XY; ++i)
-    {
-        velocityY[i] = ADC_Buffer_XY[2*i+1] * fs;  // 速度 = 加速度 × 时间（积分）
-    }
-
-    // 计算Y方向的位移（速度的积分）
-    for (uint32_t i = 1; i < FFT_N_XY; ++i)
-    {
-        displacementY[i] = displacementY[i-1] + velocityY[i] * fs;  // 位移 = 速度 × 时间（积分）
-    }
-		
-    // 输出计算结果
-    printf("X_Vrms = %.3f mm/s  Y_Vrms = %.3f mm/s\r\n", X_Vrms, Y_Vrms);
-		printf("X_Displacement = %.3f mm  Y_Displacement = %.3f mm\r\n", displacementX[FFT_N_XY-1], displacementY[FFT_N_XY-1]);
-}
-
-/* ----------------- 私有函数：频域积分 + 带通 ----------------- */
-static void integral_bandpass(float32_t *buf, float32_t fs, uint32_t N)
-{
-    const float32_t df = fs / (float32_t)N;
-
-    for (uint32_t k = 1; k < N/2; ++k) {           /* 跳过 DC (k=0) */
-        float32_t f = k * df;
-
-        /* 带通窗 */
-        if (f < MIN_FREQ_HZ || f > MAX_FREQ_HZ) {
-            buf[2*k] = buf[2*k+1] = buf[2*(N-k)] = buf[2*(N-k)+1] = 0.0f;
-            continue;
-        }
-        /* 积分：除以 jω (= 2πf) */
-        float32_t omega = 2.0f * (float32_t)M_PI * f;
-        float32_t Re = buf[2*k];
-        float32_t Im = buf[2*k+1];
-        buf[2*k]   =  Im / omega;
-        buf[2*k+1] = -Re / omega;
-        buf[2*(N-k)]   =  buf[2*k];
-        buf[2*(N-k)+1] = -buf[2*k+1];
-    }
-    /* Nyquist 分量 (k=N/2) 清零 */
-    buf[N] = buf[N+1] = 0.0f;
-}
-
 /* 增量矩更新：同时维护 mean(M1)、M2、M3、M4（Pébay/Welford 扩展） */
 static inline void moments_update_f32(float x, float n_prev,
                                       float *mean, float *M2, float *M3, float *M4)
@@ -369,51 +253,13 @@ void Z_Ha_Feature_Calc(uint16_t *Data,uint32_t FFT_N)
     meanZ = mean;                                  // 均值（g）
     rmsZ  = sqrtf( (M2 + eps) / Nf );              // 去均值 RMS（g）
     ppZ   = max_v - min_v;                         // 峰-峰（g）
-//		float beta2_biased = (Nf * M4) / ( (M2*M2) + eps );  
-//		float g2  = beta2_biased - 3.0f;                          // biased excess
-//		if (FFT_N > 3) {
-//				float G2 = ((Nf - 1.0f)/((Nf - 2.0f)*(Nf - 3.0f))) * ((Nf + 1.0f)*g2 + 6.0f);
-//				float beta2_unbiased = G2 + 3.0f;
-//				kurtZ = beta2_unbiased;                               
-//		}
+
     kurtZ = (Nf * M4) / ( (M2 * M2) + eps );       // 峭度 β2（非 excess）
-//    std = sqrtf(sum_sq / ((float32_t)FFT_N - 1.0f));    		// 标准差（N-1）
-//    skewness_factor = sum_cu / (((float32_t)FFT_N - 1.0f) * powf(std, 3));// 偏度
-//    peak_value = max_v - mean;// 	其他特征
-//    fgf = powf(sum_sq / (float32_t)FFT_N, 0.5f);  
-//    形状因子和脉冲因子
-//    crest_factor = peak_value / rms;
-//    clearance_factor = peak_value / fgf;
-//    shape_factor = rms / (sum_abs / (float32_t)FFT_N);  
-//    impulse_factor = peak_value / (sum_abs / (float32_t)FFT_N);  
 
 //    printf("mean       = %.5f g\r\n", meanZ);
 //    printf("RMS        = %.5f g\r\n", rmsZ);
 //    printf("Peak-Peak  = %.5f g\r\n", ppZ);
 //    printf("Kurtosis   = %.5f\r\n",   kurtZ); 
-		
-//		printf("std (N-1) = %.5f g\r\n", std);
-//		printf("skewness_factor = %.5f\r\n", skewness_factor);
-//    printf("peak_value = %.5f g\r\n", peak_value);
-//		printf("fgf = %.5f g\r\n", fgf);
-//    printf("crest_factor = %.5f\r\n", crest_factor);
-//    printf("clearance_factor = %.5f\r\n", clearance_factor);
-//    printf("shape_factor = %.5f\r\n", shape_factor);
-//    printf("impulse_factor = %.5f\r\n", impulse_factor);
-}
-
-static void mag_phase(const float32_t *buf,
-                      float32_t *mag, float32_t *ph, uint32_t N)
-{
-    mag[0] = fabsf(buf[0]);       ph[0] = 0.0f;
-    mag[N/2] = fabsf(buf[1]);     ph[N/2] = 0.0f;
-
-    for (uint32_t k = 1; k < N/2; ++k) {
-        float32_t Re = buf[2*k];
-        float32_t Im = buf[2*k+1];
-        mag[k] = 2.0f * sqrtf(Re*Re + Im*Im) / (float32_t)N;     /* 单边幅值归一化 */
-        ph[k]  = -atan2f(Im, Re) * 180.0f / (float32_t)M_PI - 90.0f;
-    }
 }
 
 /* 计算 Z 轴振动烈度（RMS）和 Z 轴位移峰-峰值 */
@@ -477,48 +323,6 @@ static float make_hann_window(float *w, uint32_t N) {
         sum += wn;
     }
     return (float)(sum / (double)N);  // coherent gain (≈0.5)
-}
-
-void Test()
-{
-		uint32_t FFT_LENGTH = 1024;
-		float32_t  fft_inputbuf [FFT_LENGTH*2];	
-		float32_t  fft_outputbuf[FFT_LENGTH];
-		int SAM_FRE = 2000000; //采样率
-		for(uint16_t i=0;i<FFT_LENGTH;i++)
-		  {
-				//fft_inputbuf[2*i] = (float)ADC1_ConvertedValue[ i ]*3.3f/4095.0f; //数组实部放采集到的数据
-			  fft_inputbuf[2*i] = ((sin(2*PI*200000*i/SAM_FRE)+1)*1024+ (sin(2*PI*400000*i/SAM_FRE)+1)*1024)*3.3f/4095.0f;
-				fft_inputbuf[2*i+1]=0; //虚部都放0
-		  }	
-		arm_cfft_f32(&arm_cfft_sR_f32_len1024,fft_inputbuf,0,1);	  //其中1024表示需要处理的数据个数，这里可以是1024,2048，4096
-		arm_cmplx_mag_f32(fft_inputbuf, fft_outputbuf, FFT_LENGTH); //计算幅度
-		
-		for(uint16_t i=0;i<FFT_LENGTH;i++)
-		{
-				printf("%d,%f\r\n",i,fft_outputbuf[ i ]);	//未加窗
-		}
-}
-
-void Z_Freq_Feature_Calc_TEST(uint16_t *Data, uint32_t FFT_N) 
-{
-    for (uint32_t i = 0; i < FFT_N; i++) {
-        timeBuf[i] = ((sin(2*PI*1000*i/Z_Sample_freq)+1)*1024+ (sin(2*PI*10000*i/Z_Sample_freq)+1)*1024)*3.3f/4095.0f;
-    }
-		
-		for(uint32_t i=0; i<FFT_N; i++)
-		{
-//			  timeBuf[i] = ((sin(2*PI*200000*i/Z_Sample_freq)+1)*1024+ (sin(2*PI*400000*i/Z_Sample_freq)+1)*1024)*3.3f/4095.0f;
-			  fftBuf[2*i] = timeBuf[i];
-				fftBuf[2*i+1]=0; //虚部都放0
-		}
-		float32_t mag[FFT_N];
-		arm_cfft_f32(&arm_cfft_sR_f32_len4096,fftBuf,0,1);	  //其中1024表示需要处理的数据个数，这里可以是1024,2048，4096
-		arm_cmplx_mag_f32(fftBuf, mag, FFT_N); //计算幅度
-		for(uint16_t i=0;i<FFT_N;i++)
-		{
-				printf("%d,%f\r\n",i,mag[ i ]);	
-		}
 }
 
 static inline CFFT_PTR_T pick_cfft_u32(uint32_t N)
@@ -632,16 +436,6 @@ static void hilbert_freq_multiplier(float32_t *X, uint32_t N)
         X[2*k+1] = 0.0f;
     }
 }
-static inline float32_t arm_hypot_f32(float32_t x, float32_t y)
-{
-    float32_t ax = fabsf(x);
-    float32_t ay = fabsf(y);
-    float32_t m  = (ax > ay) ? ax : ay;
-    if (m == 0.0f) return 0.0f;
-    float32_t rx = ax / m;
-    float32_t ry = ay / m;
-    return m * sqrtf(rx*rx + ry*ry);
-}
 
 // Z  包络有效值（Vrms） 和 包络峰值（Peak）
 void Enve_Feature_Calc(uint16_t *Data, uint32_t FFT_N)
@@ -689,7 +483,7 @@ void Fill_XY_AxisFeatureValue(AxisFeatureValue *axis_data, float mean, float rms
     axis_data->pp = pp;                 // 填充峰-峰值
     axis_data->kurt = kurt;             // 填充峭度
 	
-	  axis_data->peakFreq = 0.0f;         // 无效
+	axis_data->peakFreq = 0.0f;         // 无效
     axis_data->peakAmp = 0.0f;          
     axis_data->amp2x = 0.0f;              
     axis_data->envelope_vrms = 0.0f;    
