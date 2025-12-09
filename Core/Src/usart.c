@@ -22,6 +22,14 @@
 
 /* USER CODE BEGIN 0 */
 
+
+int fputc(int ch, FILE *f)
+{
+		uint8_t temp = (uint8_t)ch;
+    HAL_UART_Transmit(&huart3, &temp, 1, 0xFFFF);
+    return ch;
+}
+
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart3;
@@ -43,7 +51,7 @@ void MX_USART3_UART_Init(void)
   huart3.Instance = USART3;
   huart3.Init.BaudRate = 9600;
   huart3.Init.WordLength = UART_WORDLENGTH_8B;
-  huart3.Init.StopBits = UART_STOPBITS_1;
+  huart3.Init.StopBits = UART_STOPBITS_2;
   huart3.Init.Parity = UART_PARITY_NONE;
   huart3.Init.Mode = UART_MODE_TX_RX;
   huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
@@ -184,5 +192,56 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 }
 
 /* USER CODE BEGIN 1 */
-
+/** 
+* @Description:串口空闲回调函数
+* @param
+* @return 
+*/
+void USAR_UART_IDLECallback(UART_HandleTypeDef *huart)
+{
+	if(huart->Instance == USART3)
+	{
+		// 停止本次DMA传输
+		HAL_UART_DMAStop(&huart3);  																									 
+		// 计算接收到的数据长度
+    uint16_t recv_len = RX_DMA_BUF_SZ - __HAL_DMA_GET_COUNTER(&hdma_usart3_rx);
+		if (recv_len == 0) {
+        // 上电/抖动导致的“空闲但无数据”，忽略
+        Uart3_RxStart();            
+        return;
+    }
+//		HAL_UART_Transmit(&huart2,dma_receive_buff,data_length,0x200);                     
+		if (recv_len <= RX_FRAME_MAX) 
+		{
+				memcpy(rx_frame_buf, rx_dma_buf, recv_len);  
+				rx_frame_len   = recv_len;
+				rx_frame_ready = 1;
+		}
+		else {            
+				rx_frame_ready = 0;/* 溢出：丢帧或置错误标志 */
+		}
+	}
+//  HAL_UART_Receive_DMA(&huart3, rx_dma_buf, RX_DMA_BUF_SZ);
+		Uart3_RxStart();
+}
+/** 
+* @Description:串口空闲中断检测，写在函数void USART2_IRQHandler(void)中
+* @param
+* @return 
+*/
+void On_IDLE(UART_HandleTypeDef *huart)
+{	
+	if(huart->Instance == USART3)                                
+	{	
+		// 判断是否是空闲中断
+		if(RESET != __HAL_UART_GET_FLAG(&huart3, UART_FLAG_IDLE))   
+		{	 
+			// 清除空闲中断标志（否则会一直不断进入中断）
+			__HAL_UART_CLEAR_IDLEFLAG(&huart3);                    
+			// 调用中断处理函数
+			USAR_UART_IDLECallback(&huart3);                          
+		}
+	}
+	
+}
 /* USER CODE END 1 */
