@@ -260,13 +260,13 @@ void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf)
 
 
 //Test
-void print_g_data(uint16_t *buf, uint32_t N)
+void print_g_data(float *buf, uint32_t N)
 {
+    Eigen_Separate_And_Convert(ADC_Buffer_Z, ADC_Buffer_XY);
     for (uint32_t i = 0; i < N; i++) 
-		{
-			float g =  buf[i];
-			printf("%.3f \n", g);
-		}
+	{
+        printf("%.3f \n", buf[i]);
+	}
 }
 
 
