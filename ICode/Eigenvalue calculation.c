@@ -4,7 +4,6 @@
 static arm_rfft_fast_instance_f32 S_rfft;
 static float32_t fftBuf[FFT_N_Z * 2]; // 复数运算缓冲区 (Z轴最长)
 
-float Temp;
 float g_z_offset_g  = 0.0f;   // 0g 偏移
 float fr = 50;
 

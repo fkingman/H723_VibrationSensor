@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
 <ProjectOpt xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="project_optx.xsd">
 
   <SchemaVersion>1.0</SchemaVersion>
@@ -45,7 +45,7 @@
         <PageWidth>79</PageWidth>
         <PageLength>66</PageLength>
         <TabStop>8</TabStop>
-        <ListingPath />
+        <ListingPath></ListingPath>
       </OPTLEX>
       <ListingPage>
         <CreateCListing>1</CreateCListing>
@@ -104,16 +104,16 @@
         <bSchkAxf>0</bSchkAxf>
         <bTchkAxf>0</bTchkAxf>
         <nTsel>3</nTsel>
-        <sDll />
-        <sDllPa />
-        <sDlgDll />
-        <sDlgPa />
-        <sIfile />
-        <tDll />
-        <tDllPa />
-        <tDlgDll />
-        <tDlgPa />
-        <tIfile />
+        <sDll></sDll>
+        <sDllPa></sDllPa>
+        <sDlgDll></sDlgDll>
+        <sDlgPa></sDlgPa>
+        <sIfile></sIfile>
+        <tDll></tDll>
+        <tDllPa></tDllPa>
+        <tDlgDll></tDlgDll>
+        <tDlgPa></tDlgPa>
+        <tIfile></tIfile>
         <pMon>BIN\CMSIS_AGDI.dll</pMon>
       </DebugOpt>
       <TargetDriverDllRegistry>
@@ -130,12 +130,12 @@
         <SetRegEntry>
           <Number>0</Number>
           <Key>ARMDBGFLAGS</Key>
-          <Name />
+          <Name></Name>
         </SetRegEntry>
         <SetRegEntry>
           <Number>0</Number>
           <Key>DLGUARM</Key>
-          <Name />
+          <Name></Name>
         </SetRegEntry>
         <SetRegEntry>
           <Number>0</Number>
@@ -157,114 +157,18 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>117</LineNumber>
+          <LineNumber>214</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134271790</Address>
+          <Address>134265572</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>1</BreakIfRCount>
-          <Filename>..\ICode\Eigenvalue calculation.c</Filename>
-          <ExecCommand />
-          <Expression>\\H723_VibrationSensor\../ICode/Eigenvalue calculation.c\117</Expression>
-        </Bp>
-        <Bp>
-          <Number>1</Number>
-          <Type>0</Type>
-          <LineNumber>117</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>134271820</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>..\ICode\Eigenvalue calculation.c</Filename>
-          <ExecCommand />
-          <Expression>\\\../ICode/Eigenvalue calculation.c\117</Expression>
-        </Bp>
-        <Bp>
-          <Number>2</Number>
-          <Type>0</Type>
-          <LineNumber>149</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>134260582</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>../Core/Src/main.c</Filename>
-          <ExecCommand />
-          <Expression>\\H723_VibrationSensor\../Core/Src/main.c\149</Expression>
-        </Bp>
-        <Bp>
-          <Number>3</Number>
-          <Type>0</Type>
-          <LineNumber>313</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>134270400</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>../Core/Src/main.c</Filename>
-          <ExecCommand />
-          <Expression>\\H723_VibrationSensor\../Core/Src/main.c\313</Expression>
-        </Bp>
-        <Bp>
-          <Number>4</Number>
-          <Type>0</Type>
-          <LineNumber>310</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>134270378</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>../Core/Src/main.c</Filename>
-          <ExecCommand />
-          <Expression>\\H723_VibrationSensor\../Core/Src/main.c\310</Expression>
-        </Bp>
-        <Bp>
-          <Number>5</Number>
-          <Type>0</Type>
-          <LineNumber>311</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>0</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>0</BreakIfRCount>
-          <Filename>../Core/Src/main.c</Filename>
-          <ExecCommand />
-          <Expression />
-        </Bp>
-        <Bp>
-          <Number>6</Number>
-          <Type>0</Type>
-          <LineNumber>314</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>0</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>0</BreakIfRCount>
-          <Filename>../Core/Src/main.c</Filename>
-          <ExecCommand />
-          <Expression />
+          <Filename>../Core/Src/usart.c</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\H723_VibrationSensor\../Core/Src/usart.c\214</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
@@ -463,19 +367,19 @@
         <newCpu>0</newCpu>
         <uProt>0</uProt>
       </DebugFlag>
-      <LintExecutable />
-      <LintConfigFile />
+      <LintExecutable></LintExecutable>
+      <LintConfigFile></LintConfigFile>
       <bLintAuto>0</bLintAuto>
       <bAutoGenD>0</bAutoGenD>
       <LntExFlags>0</LntExFlags>
-      <pMisraName />
-      <pszMrule />
-      <pSingCmds />
-      <pMultCmds />
-      <pMisraNamep />
-      <pszMrulep />
-      <pSingCmdsp />
-      <pMultCmdsp />
+      <pMisraName></pMisraName>
+      <pszMrule></pszMrule>
+      <pSingCmds></pSingCmds>
+      <pMultCmds></pMultCmds>
+      <pMisraNamep></pMisraNamep>
+      <pszMrulep></pszMrulep>
+      <pSingCmdsp></pSingCmdsp>
+      <pMultCmdsp></pMultCmdsp>
       <DebugDescription>
         <Enable>1</Enable>
         <EnableFlashSeq>0</EnableFlashSeq>

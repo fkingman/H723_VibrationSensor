@@ -66,6 +66,8 @@ AxisFeatureValue X_data;
 AxisFeatureValue Y_data;
 AxisFeatureValue Z_data;
 
+float Temp = 0.0f;
+
 typedef enum {
     BUFFER_IDLE = 0,
     BUFFER_HALF_READY, // 前半段好了
@@ -226,7 +228,6 @@ int main(void)
         __enable_irq();
 
         Process_Data(Process_Buffer_Z, Process_Buffer_XY);
-        memcpy(Tx_Wave_Buffer_Z, g_data_z, sizeof(Tx_Wave_Buffer_Z)); 
 
     }  
 	}
@@ -327,7 +328,7 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
         // 使得 Cache 无效化（如果开启了 D-Cache），确保 CPU 读取到 DMA 写入的最新数据
         SCB_InvalidateDCache_by_Addr((uint32_t*)&ADC_Buffer_Z[0], FFT_N_Z * 2);
 
-        // 【核心操作】把前半段 (0 ~ N-1) 拷贝到计算区
+        // 把前半段 (0 ~ N-1) 拷贝到计算区
         memcpy(Process_Buffer_Z, &ADC_Buffer_Z[0], FFT_N_Z * sizeof(uint16_t));
         
         z_data_ready_flag = 1; // 通知主循环
@@ -371,6 +372,13 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
     }
 }
 
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if (huart->Instance == USART3)
+    {
+        g_tx_busy = 0; 
+    }
+}
 
 /* USER CODE END 4 */
 

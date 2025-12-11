@@ -19,7 +19,7 @@ typedef struct __attribute__((packed,aligned(4))) {
 
 #define FLASH_CFG_MAGIC         0xA5A55A5Au
 #define FLASH_CFG_DEFAULT_ADDR  0x00
-#define FLASH_CFG_DEFAULT_FREQ    51200u       // 默认采样率
+#define FLASH_CFG_DEFAULT_FREQ    25600u       // 默认采样率
 #define FLASH_CFG_DEFAULT_POINTS  4096u        // 默认点数
 
 

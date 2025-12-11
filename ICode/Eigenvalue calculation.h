@@ -46,7 +46,6 @@ typedef struct
     float envelope_peak;       // 包络峰值（4字节）
 } AxisFeatureValue;
 extern AxisFeatureValue X_data,Y_data,Z_data;
-extern float Temp; 
 extern float g_z_offset_g;
 
 void Calc_Init(void);// 用于在上电时调用一次，负责 FFT 表初始化和滤波器初始化
