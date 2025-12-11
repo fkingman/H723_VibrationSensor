@@ -263,9 +263,9 @@ static bool HandleSetAddr_Broadcast(const uint8_t* rx, uint16_t flen)
 
     // 幂等：一样就只回 ACK
     if (LOCAL_DEVICE_ADDR == new_addr) {
-        static uint8_t tx[1+1+1+1+2];
+        static uint8_t tx[5+2];
 				uint8_t *p = tx;
-        *p++ = new_addr; *p++ = CMD_SET_ADDR; *p++ = 1; *p++ = new_addr;
+        *p++ = new_addr; *p++ = CMD_SET_ADDR; *p++ = 0x02; *p++ = 0x4F;*p++ = 0x4B;
         uint16_t crc = Modbus_CRC16(tx, (uint16_t)(p - tx));
         *p++ = (uint8_t)crc; *p++ = (uint8_t)(crc >> 8);
 		//		HAL_UART_Transmit_DMA(&huart3, tx, (uint16_t)(p - tx));
@@ -275,10 +275,9 @@ static bool HandleSetAddr_Broadcast(const uint8_t* rx, uint16_t flen)
 
     if (Flash_WriteDeviceAddr(new_addr) == HAL_OK) {
         LOCAL_DEVICE_ADDR = new_addr;
-
-        static uint8_t tx[1+1+1+1+2];
+        static uint8_t tx[5+2];
 				uint8_t *p = tx;
-        *p++ = new_addr; *p++ = CMD_SET_ADDR; *p++ = 1; *p++ = new_addr;
+        *p++ = new_addr; *p++ = CMD_SET_ADDR; *p++ = 0x02; *p++ = 0x4F;*p++ = 0x4B;
         uint16_t crc = Modbus_CRC16(tx, (uint16_t)(p - tx));
         *p++ = (uint8_t)crc; *p++ = (uint8_t)(crc >> 8);
 		//		HAL_UART_Transmit_DMA(&huart3, tx, (uint16_t)(p - tx));
@@ -337,15 +336,34 @@ static void Config_SendAck(uint8_t dev_id)
 //		HAL_UART_Transmit_DMA(&huart3, tx, (uint16_t)(p - tx));
 		uart3_send_dma(tx, (uint16_t)(p - tx));	
 }
+static void Cfg_SendAck(uint8_t dev_id)
+{
+    static uint8_t tx[5 + 2];      
+    uint8_t *p = tx;
+
+    *p++ = dev_id;
+    *p++ = CMD_CONFIG;              
+    *p++ = 0x02;   // 0 = OK
+		*p++ = 0x4F;
+    *p++ = 0x4B;   //ok                      
+
+    uint16_t crc = Modbus_CRC16(tx, (uint16_t)(p - tx));
+    *p++ = (uint8_t)crc;
+    *p++ = (uint8_t)(crc >> 8);
+
+//		HAL_UART_Transmit_DMA(&huart3, tx, (uint16_t)(p - tx));
+		uart3_send_dma(tx, (uint16_t)(p - tx));	
+}
 /**********************************校准配置应答**********************************/
 static void CALIBRATION_Config_SendAck(uint8_t dev_id)
 {
-		static uint8_t tx[5];
+		static uint8_t tx[5 + 2];
 		uint8_t *p = tx;
 		*p++ = dev_id;
 		*p++ = CMD_CALIBRATION;
-		*p++ = 0x00;   // 0 = OK
-		
+		*p++ = 0x02;   // 0 = OK
+		*p++ = 0x4F;
+    *p++ = 0x4B;   //ok
 	  uint16_t crc = Modbus_CRC16(tx, (uint16_t)(p - tx));
     *p++ = (uint8_t)crc;
     *p++ = (uint8_t)(crc >> 8);
@@ -392,8 +410,8 @@ void Protocol_HandleRxFrame(const uint8_t *rx, uint16_t len, uint8_t local_addre
 		case CMD_CONFIG:
 			  switch (b2)
         {
-        case FREQ: Config_ParseAndApply_Freq(rx);Config_SendAck(dev_id); break;
-        case PORINT: Config_ParseAndApply_Point(rx);Config_SendAck(dev_id); break;			
+        case FREQ: Config_ParseAndApply_Freq(rx);Cfg_SendAck(dev_id); break;
+        case PORINT: Config_ParseAndApply_Point(rx);Cfg_SendAck(dev_id); break;			
         default: break;
         }
         break;

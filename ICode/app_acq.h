@@ -7,7 +7,7 @@
 #endif
 
 #ifndef ACQ_TIM_CLK_HZ
-#define ACQ_TIM_CLK_HZ   (200000000u) // 你的TIM2时钟：64 MHz
+#define ACQ_TIM_CLK_HZ   (200000000u) // TIM2时钟：200 MHz
 #endif
 
 /* 默认把PSC固定为1（实际分频=PSC+1=1），与Cube默认一致 */

@@ -82,7 +82,7 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN Private defines */
 #define FFT_N_Z        4096 			  									// 你需要采集的点数
-#define FFT_N_XY  		 2048  							// 你需要采集的点数
+#define FFT_N_XY  		 4096  							// 你需要采集的点数
 #define Z_Sample_freq  25598.36								// Z轴采集频率
 extern uint16_t ADC_Buffer_Z[FFT_N_Z * 2];     
 extern uint16_t ADC_Buffer_XY[FFT_N_XY * 2 * 2];

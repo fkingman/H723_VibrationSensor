@@ -13,7 +13,7 @@ static HAL_StatusTypeDef ACQ_ReprogramTimer(uint32_t freq_hz)
     if (freq_hz == 0) return HAL_ERROR;
 
     const uint32_t timclk = (uint32_t)ACQ_TIM_CLK_HZ;
-    const uint32_t psc    = (uint32_t)ACQ_TIM_PSC_DEFAULT;   // 1 → 实际分频=2
+    const uint32_t psc    = (uint32_t)ACQ_TIM_PSC_DEFAULT;   // 0 → 实际分频=1
 
     /* 目标总分频 D ≈ timclk / freq；四舍五入后求 ARR */
     uint64_t D = ((uint64_t)timclk + (uint64_t)freq_hz/2) / (uint64_t)freq_hz;
