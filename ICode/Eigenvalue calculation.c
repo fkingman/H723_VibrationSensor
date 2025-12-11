@@ -63,7 +63,7 @@ void Z_Calib_Z_Upright_Neg1G(float *gBuf, uint32_t N)
     float mean_current = sum_g / (float)N;
 
     const float target_g = -1.0f;
-
+  
     g_z_offset_g += (mean_current - target_g);
 }
 /*
@@ -125,48 +125,57 @@ void Calc_TimeDomain_Only(float32_t *data, uint32_t len, AxisFeatureValue *resul
     result->kurt = kurt;
 }
 //频域特征计算 (Z轴: PeakFreq, PeakAmp, 2xAmp)
-void Calc_FreqDomain_Z(float32_t *data, uint32_t len, float rotation_speed)
+void Calc_FreqDomain_Z(float32_t *data, uint32_t len)
 {
-	for (uint32_t i = 0; i < len; i++) //准备 FFT 输入
+    float32_t current_fs = (float32_t)ACQ_GetFreqHz();
+    
+    for (uint32_t i = 0; i < len; i++) 
     {
         fftBuf[2 * i]     = data[i];
         fftBuf[2 * i + 1] = 0.0f;
     }
+    
     extern const arm_cfft_instance_f32 arm_cfft_sR_f32_len4096;
     arm_cfft_f32(&arm_cfft_sR_f32_len4096, fftBuf, 0, 1);
-    arm_cmplx_mag_f32(fftBuf, fftBuf, len);//计算幅值
+    
+    arm_cmplx_mag_f32(fftBuf, fftBuf, len);    // 4. 计算幅值 (Modulus)
 
-    float32_t norm = 2.0f / (float32_t)len;//归一化 (除以 N/2，直流除以 N)
-    fftBuf[0] /= (float32_t)len; // DC
+    // 归一化
+    // 直流分量除以 N，交流分量除以 N/2
+    float32_t norm = 2.0f / (float32_t)len;
+    fftBuf[0] /= (float32_t)len; 
     for (uint32_t i = 1; i < len / 2; i++) {
         fftBuf[i] *= norm;
     }
-    // 寻找主峰幅值 
+
+    //寻找主峰 (Max Peak) -> 认定为主频
     float32_t maxAmp = 0.0f;
     uint32_t maxIndex = 0;
-    // 从索引 1 (分辨率) 开始找，避开 0Hz
-    for (uint32_t i = 1; i < len / 2; i++) {
+    
+    // 从索引 5 开始找（避开 0Hz 直流和极低频噪声，例如 5*分辨率 频率以下的）
+    // 假设分辨率 6Hz，这就避开了 30Hz 以下。如果你的转速很慢，这里要改成 1
+    for (uint32_t i = 3; i < len / 2; i++) {
         if (fftBuf[i] > maxAmp) {
             maxAmp = fftBuf[i];
             maxIndex = i;
         }
     }
-    //计算主频
-    float32_t freq_res = (float32_t)Z_Sample_freq / (float32_t)len;
+    
+    // 计算物理频率
+    float32_t freq_res = current_fs / (float32_t)len;
     float32_t peak_freq = (float32_t)maxIndex * freq_res;
 
-    //寻找 2x 转频幅值
+    // 寻找 2x 主频幅值
     float32_t amp_2x = 0.0f;
-    if (rotation_speed > 0.1f) {
-        float32_t target_freq = 2.0f * rotation_speed;
-        uint32_t target_idx = (uint32_t)(target_freq / freq_res);
-        if (target_idx < len / 2) {
-            amp_2x = fftBuf[target_idx];
-        }
+    uint32_t index_2x = maxIndex * 2;
+    
+    if (index_2x < len / 2) { // 边界检查
+        amp_2x = fftBuf[index_2x];
     }
-    Z_data.peakFreq = peak_freq;
-    Z_data.peakAmp  = maxAmp;
-    Z_data.amp2x    = amp_2x;
+
+    Z_data.peakFreq = peak_freq; // 自动识别的主频
+    Z_data.peakAmp  = maxAmp;    // 主频幅值
+    Z_data.amp2x    = amp_2x;    // 2倍主频幅值
 }
 
 //包络特征计算
@@ -244,15 +253,14 @@ void print_FEATURE(void)
 	
 void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf)
 {	  
-    Eigen_Separate_And_Convert(ADC_Buffer_Z, ADC_Buffer_XY);
+    Eigen_Separate_And_Convert(pZBuf, pXYBuf);
 
     Calc_TimeDomain_Only(g_data_x, FFT_N_XY, &X_data);
     Calc_TimeDomain_Only(g_data_y, FFT_N_XY, &Y_data);
     Calc_TimeDomain_Only(g_data_z, FFT_N_Z,  &Z_data);
 
-    Calc_FreqDomain_Z(g_data_z, FFT_N_Z, fr);
+    Calc_FreqDomain_Z(g_data_z, FFT_N_Z);
     Calc_Envelope_Z(g_data_z, FFT_N_Z);
-    Temp = Tempetature_Dis();
 }
 
 
