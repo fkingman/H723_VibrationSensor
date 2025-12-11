@@ -58,10 +58,7 @@ void Calc_Envelope_Z(float32_t *data, uint32_t len);
 float Tempetature_Dis(void);
 void Z_Calib_Z_Upright_Neg1G(uint16_t *adcBuf, uint32_t N);
 
-void print_adc_buffer_Z(uint16_t *buf, uint32_t N);
-void print_adc_buffer_X(uint16_t *buf, uint32_t N);
-void print_adc_buffer_Y(uint16_t *buf, uint32_t N);
-void print_TEMP();
+void print_g_data(uint16_t *buf, uint32_t N);
 void print_FEATURE();
 
 															

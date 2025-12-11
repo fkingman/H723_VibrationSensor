@@ -294,6 +294,28 @@ float Tempetature_Dis(void)
     Value = ((int)(Value * 10)) / 10.0;  // 保留一位小数
     return Value;
 }
+//非阻塞式
+short Ds18b20_Read_Result(void)
+{
+    unsigned char TL, TH;
+    short tem;
 
-
+    // 1. 复位 (这里直接调用Rst即可，不需要Init重新配GPIO时钟)
+    Ds18b20_Rst(); 
+    
+    // 2. 发送读取命令
+    Ds18b20_Write_Byte(0xcc);   // 跳过ROM
+    Ds18b20_Write_Byte(0xbe);   // 读取暂存寄存器
+    
+    // 3. 读取高低字节
+    TL = Ds18b20_Read_Byte();     // 低八位
+    TH = Ds18b20_Read_Byte();     // 高八位
+    
+    // 4. 合成温度值
+    tem = TH;
+    tem <<= 8;
+    tem += TL;
+    
+    return tem;
+}
 

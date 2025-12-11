@@ -37,8 +37,8 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 //U3接收
-uint8_t  rx_dma_buf[RX_DMA_BUF_SZ]; 
-uint8_t  rx_frame_buf[RX_FRAME_MAX];
+__attribute__((section(".RAM_D2"))) uint8_t rx_dma_buf[RX_DMA_BUF_SZ];
+__attribute__((section(".RAM_D2"))) uint8_t rx_frame_buf[RX_FRAME_MAX];
 volatile uint16_t rx_frame_len = 0;
 volatile uint8_t  rx_frame_ready = 0;
 
@@ -67,6 +67,8 @@ AxisFeatureValue Y_data;
 AxisFeatureValue Z_data;
 
 float Temp = 0.0f;
+uint32_t temp_timer = 0;      // 用于计时
+uint8_t  temp_state = 0;      // 状态机：0=需要启动转换, 1=等待转换完成
 
 typedef enum {
     BUFFER_IDLE = 0,
@@ -212,10 +214,10 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    uint32_t now = HAL_GetTick();
     if (rx_frame_ready) 
       {
         rx_frame_ready = 0;  
-        // 此时直接回复 X_data/Z_data，这些变量保存的是“上一次计算”的结果
         Protocol_HandleRxFrame(rx_frame_buf, rx_frame_len, LOCAL_DEVICE_ADDR);
       }
 
@@ -226,10 +228,36 @@ int main(void)
         z_data_ready_flag = 0;
         xy_data_ready_flag = 0;
         __enable_irq();
-
         Process_Data(Process_Buffer_Z, Process_Buffer_XY);
-
-    }  
+    }
+    if (temp_state == 0) 
+      {
+          if (now - temp_timer > 1000) // 每1秒发起一次（或者你想要的间隔）
+          {
+              Ds18b20_Start(); // 发送 0x44 
+              temp_timer = now; // 记录发起时间
+              temp_state = 1;   // 切换到等待状态
+          }
+      }
+    else if (temp_state == 1)
+      {
+          if (now - temp_timer > 800) // 留一点余量，给800ms
+          {
+              short raw_temp = Ds18b20_Read_Result(); 
+              
+              if((raw_temp & 0XF800) > 0) // 负温
+              {
+                  raw_temp = ~raw_temp + 1;
+                  Temp = -(float)raw_temp / 16.0f;
+              }
+              else // 正温
+              {
+                  Temp = (float)(raw_temp & 0X07FF) / 16.0f;
+              }          
+              // printf("Async Temp: %.1f\r\n", Temp);
+              temp_state = 0; 
+          }
+      }  
 	}
   /* USER CODE END 3 */
 }
@@ -326,7 +354,7 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
     if (hadc->Instance == ADC1) 
     {
         // 使得 Cache 无效化（如果开启了 D-Cache），确保 CPU 读取到 DMA 写入的最新数据
-        SCB_InvalidateDCache_by_Addr((uint32_t*)&ADC_Buffer_Z[0], FFT_N_Z * 2);
+        //SCB_InvalidateDCache_by_Addr((uint32_t*)&ADC_Buffer_Z[0], FFT_N_Z * 2);
 
         // 把前半段 (0 ~ N-1) 拷贝到计算区
         memcpy(Process_Buffer_Z, &ADC_Buffer_Z[0], FFT_N_Z * sizeof(uint16_t));
@@ -336,7 +364,7 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
     // XY 轴处理
     else if (hadc->Instance == ADC2)
     {
-        SCB_InvalidateDCache_by_Addr((uint32_t*)&ADC_Buffer_XY[0], FFT_N_XY * 2 * 2);
+        //SCB_InvalidateDCache_by_Addr((uint32_t*)&ADC_Buffer_XY[0], FFT_N_XY * 2 * 2);
 
         // XY 是交错的，前半段长度是 FFT_N_XY * 2
         memcpy(Process_Buffer_XY, &ADC_Buffer_XY[0], (FFT_N_XY * 2) * sizeof(uint16_t));
@@ -352,7 +380,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
     if (hadc->Instance == ADC1) 
     {
         // 使得 Cache 无效化
-        SCB_InvalidateDCache_by_Addr((uint32_t*)&ADC_Buffer_Z[FFT_N_Z], FFT_N_Z * 2);
+        //SCB_InvalidateDCache_by_Addr((uint32_t*)&ADC_Buffer_Z[FFT_N_Z], FFT_N_Z * 2);
 
         // 把后半段 (N ~ 2N-1) 拷贝到计算区
         // 注意源地址偏移了 FFT_N_Z
@@ -363,7 +391,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
     // XY 轴处理
     else if (hadc->Instance == ADC2) 
     {
-        SCB_InvalidateDCache_by_Addr((uint32_t*)&ADC_Buffer_XY[FFT_N_XY * 2], FFT_N_XY * 2 * 2);
+        //SCB_InvalidateDCache_by_Addr((uint32_t*)&ADC_Buffer_XY[FFT_N_XY * 2], FFT_N_XY * 2 * 2);
 
         // 源地址偏移 FFT_N_XY * 2
         memcpy(Process_Buffer_XY, &ADC_Buffer_XY[FFT_N_XY * 2], (FFT_N_XY * 2) * sizeof(uint16_t));

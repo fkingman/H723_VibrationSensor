@@ -241,7 +241,7 @@ void print_FEATURE(void)
     printf("         2x Amp    = %.4f g\r\n", Z_data.amp2x);
     printf("[Z-Enve] Env Vrms  = %.3f g     Env Peak = %.3f g\r\n", 
            Z_data.envelope_vrms, Z_data.envelope_peak);
-
+	printf("Temp is: %.1f°C\n", Temp);
     printf("===============================================\r\n\n");
 }
 	
@@ -260,36 +260,14 @@ void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf)
 
 
 //Test
-void print_adc_buffer_Z(uint16_t *buf, uint32_t N)
+void print_g_data(uint16_t *buf, uint32_t N)
 {
     for (uint32_t i = 0; i < N; i++) 
 		{
-			float g =  Zcode_to_g(buf[i]);
+			float g =  buf[i];
 			printf("%.3f \n", g);
 		}
 }
 
-void print_adc_buffer_X(uint16_t *buf, uint32_t N)
-{
-    for (uint32_t i = 0; i < N; i++)
-    {
-        float g = XYcode_to_g(buf[2 * i]);   // X 在偶数索引
-        printf("%.3f\n", g);
-    }
-}
-void print_adc_buffer_Y(uint16_t *buf, uint32_t N)
-{
-    for (uint32_t i = 0; i < N; i++)
-    {
-        float g = XYcode_to_g(buf[2 * i + 1]);  // Y 在奇数索引
-        printf("%.3f\n", g);
-    }
-}
-
-void print_TEMP()
-{		
-	    Temp = Tempetature_Dis();
-		printf("Temp is: %.1f°C\n", Temp);
-}
 
 

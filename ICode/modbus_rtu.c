@@ -401,15 +401,13 @@ void Protocol_HandleRxFrame(const uint8_t *rx, uint16_t len, uint8_t local_addre
     case CMD_TEST: 
         switch (b2)
         {
-        case CH_X: print_adc_buffer_X(g_data_x,200); break;
-        case CH_Y: print_adc_buffer_Y(g_data_y,200); break;
-        case CH_Z: print_adc_buffer_Z(g_data_z,200); break;
+        case CH_X: print_g_data(g_data_x,200); break;
+        case CH_Y: print_g_data(g_data_y,200); break;
+        case CH_Z: print_g_data(g_data_z,200); break;
 				case CH_FEATURE: print_FEATURE(); break;
-				case CH_TEMP:printf("Temp is: %.1f°C\n", Temp); break;
-				case CH_FEATURE_TEST:send_feature_pkt_test(dev_id); break;
-        case CH_X3: print_adc_buffer_X(g_data_x,500); break;
-        case CH_Y3: print_adc_buffer_Y(g_data_y,500); break;
-        case CH_Z3: print_adc_buffer_Z(g_data_z,600); break;					
+        case CH_X3: print_g_data(g_data_x,600); break;
+        case CH_Y3: print_g_data(g_data_y,600); break;
+        case CH_Z3: print_g_data(g_data_z,600); break;					
         default: break;
         }
         break;	

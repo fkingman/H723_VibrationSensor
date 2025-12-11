@@ -41,5 +41,7 @@ enum {
 int DS18B20_ReadROM(uint8_t rom[8]);
 short Get_Tempetature(void);
 void Ds18b20_Init(void);
+void Ds18b20_Start(void);
 float Tempetature_Dis(void);
+short Ds18b20_Read_Result(void);      // 不延时
 #endif /* __DS18B20_H__ */

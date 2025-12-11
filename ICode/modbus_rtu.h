@@ -26,8 +26,6 @@ Z:	mean RMS PP Displacement_PP Envelope_Vrms Envelope_Peak
 #define CH_Y          	 		  0x02
 #define CH_Z         		 		0x03
 #define CH_FEATURE                  0x04
-#define CH_TEMP          		   0x05
-#define CH_FEATURE_TEST            0x06
 #define CH_X3         		 		0x07
 #define CH_Y3         	 		   0x08
 #define CH_Z3        		 		0x09
