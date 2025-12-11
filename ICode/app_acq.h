@@ -2,35 +2,30 @@
 #include "stm32h7xx_hal.h"
 #include <stdint.h>
 
-#ifndef ACQ_TIM_HANDLE
-#define ACQ_TIM_HANDLE   htim2       
-#endif
-
+/* * 你的 STM32H7 主频 400MHz/2 = 200MHz (sysclk)
+ * APB1 分频 = 2 -> APB1 = 100MHz
+ * TIM2/3 在 APB1，时钟 x2 -> 200MHz
+ */
 #ifndef ACQ_TIM_CLK_HZ
-#define ACQ_TIM_CLK_HZ   (200000000u) // TIM2时钟：200 MHz
-#endif
-
-/* 默认把PSC固定为1（实际分频=PSC+1=1），与Cube默认一致 */
-#ifndef ACQ_TIM_PSC_DEFAULT
-#define ACQ_TIM_PSC_DEFAULT  (0u)
+#define ACQ_TIM_CLK_HZ   (200000000u) 
 #endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* 上电：应用频率与点数（会重配置TIM2并把点数写到全局） */
+/* 上电：应用频率与点数（会同时配置 TIM2 和 TIM3） */
 HAL_StatusTypeDef ACQ_Init(uint32_t freq_hz, uint16_t points);
 
-/* 运行期：设置采样频率（Hz），立即生效（重载PSC/ARR） */
+/* 运行期：设置采样频率（Hz），立即生效 */
 HAL_StatusTypeDef ACQ_SetFreqHz(uint32_t freq_hz);
 uint32_t          ACQ_GetFreqHz(void);
 
-/* 运行期：设置/获取采样点数（影响你的波形发送） */
+/* 运行期：设置/获取采样点数 */
 void              ACQ_SetPoints(uint16_t points);
 uint16_t          ACQ_GetPoints(void);
 
-/* 如果需要单独启停定时器（一般不必调用；Init里已使能） */
+/* 启动/停止定时器（TIM2 和 TIM3 同步操作） */
 HAL_StatusTypeDef ACQ_TimerStart(void);
 HAL_StatusTypeDef ACQ_TimerStop(void);
 

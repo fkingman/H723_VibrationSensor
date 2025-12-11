@@ -10,8 +10,6 @@ extern uint16_t g_cfg_freq_hz;
 extern uint16_t g_cfg_points;
 extern uint16_t wave_points;   // 波形发送
 
-extern void Z_Calib_Z_Upright_Neg1G(uint16_t *adcBuf, uint32_t N);
-	
 extern float* getZBuf(void);
 
 extern uint8_t LOCAL_DEVICE_ADDR;
@@ -415,7 +413,7 @@ void Protocol_HandleRxFrame(const uint8_t *rx, uint16_t len, uint8_t local_addre
         default: break;
         }
         break;
-    case CMD_CALIBRATION:Z_Calib_Z_Upright_Neg1G(ADC_Buffer_Z, 100);CALIBRATION_Config_SendAck(dev_id); break;
+    case CMD_CALIBRATION:Z_Calib_Z_Upright_Neg1G(g_data_z, 100);CALIBRATION_Config_SendAck(dev_id); break;
     case CMD_TEST: 
         switch (b2)
         {

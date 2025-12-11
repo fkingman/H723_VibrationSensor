@@ -3,7 +3,7 @@
 <title>Static Call Graph - [H723_VibrationSensor\H723_VibrationSensor.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image H723_VibrationSensor\H723_VibrationSensor.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Thu Dec 11 18:32:12 2025
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Thu Dec 11 19:06:11 2025
 <BR><P>
 <H3>Maximum Stack Usage =        424 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -608,7 +608,7 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[a3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_llsr
 <LI><a href="#[a4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_llsl
 </UL>
-<BR>[Called By]<UL><LI><a href="#[ba]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ACQ_ReprogramTimer
+<BR>[Called By]<UL><LI><a href="#[ba]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Config_Timer
 <LI><a href="#[155]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_SetConfig
 <LI><a href="#[187]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_core
 <LI><a href="#[189]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_fp_digits
@@ -836,18 +836,18 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[d2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Calc_Init
 </UL>
 
-<P><STRONG><a name="[b9]"></a>ACQ_Init</STRONG> (Thumb, 50 bytes, Stack size 16 bytes, app_acq.o(i.ACQ_Init))
-<BR><BR>[Stack]<UL><LI>Max Depth = 104<LI>Call Chain = ACQ_Init &rArr; ACQ_ReprogramTimer &rArr; __aeabi_uldivmod
+<P><STRONG><a name="[b9]"></a>ACQ_Init</STRONG> (Thumb, 80 bytes, Stack size 24 bytes, app_acq.o(i.ACQ_Init))
+<BR><BR>[Stack]<UL><LI>Max Depth = 120<LI>Call Chain = ACQ_Init &rArr; Config_Timer &rArr; __aeabi_uldivmod
 </UL>
-<BR>[Calls]<UL><LI><a href="#[ba]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ACQ_ReprogramTimer
+<BR>[Calls]<UL><LI><a href="#[ba]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Config_Timer
 </UL>
 <BR>[Called By]<UL><LI><a href="#[cb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;App_ConfigInit
 </UL>
 
-<P><STRONG><a name="[bb]"></a>ACQ_SetFreqHz</STRONG> (Thumb, 28 bytes, Stack size 16 bytes, app_acq.o(i.ACQ_SetFreqHz))
-<BR><BR>[Stack]<UL><LI>Max Depth = 104<LI>Call Chain = ACQ_SetFreqHz &rArr; ACQ_ReprogramTimer &rArr; __aeabi_uldivmod
+<P><STRONG><a name="[bb]"></a>ACQ_SetFreqHz</STRONG> (Thumb, 46 bytes, Stack size 16 bytes, app_acq.o(i.ACQ_SetFreqHz))
+<BR><BR>[Stack]<UL><LI>Max Depth = 112<LI>Call Chain = ACQ_SetFreqHz &rArr; Config_Timer &rArr; __aeabi_uldivmod
 </UL>
-<BR>[Calls]<UL><LI><a href="#[ba]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ACQ_ReprogramTimer
+<BR>[Calls]<UL><LI><a href="#[ba]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Config_Timer
 </UL>
 <BR>[Called By]<UL><LI><a href="#[d6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Config_ParseAndApply_Freq
 </UL>
@@ -913,7 +913,7 @@ Global Symbols
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32h723xx.o(RESET)
 </UL>
 <P><STRONG><a name="[cb]"></a>App_ConfigInit</STRONG> (Thumb, 70 bytes, Stack size 16 bytes, main.o(i.App_ConfigInit))
-<BR><BR>[Stack]<UL><LI>Max Depth = 120<LI>Call Chain = App_ConfigInit &rArr; ACQ_Init &rArr; ACQ_ReprogramTimer &rArr; __aeabi_uldivmod
+<BR><BR>[Stack]<UL><LI>Max Depth = 136<LI>Call Chain = App_ConfigInit &rArr; ACQ_Init &rArr; Config_Timer &rArr; __aeabi_uldivmod
 </UL>
 <BR>[Calls]<UL><LI><a href="#[cc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Flash_ReadConfig
 <LI><a href="#[b9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ACQ_Init
@@ -2178,7 +2178,7 @@ Global Symbols
 <P><STRONG><a name="[5]"></a>UsageFault_Handler</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, stm32h7xx_it.o(i.UsageFault_Handler))
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32h723xx.o(RESET)
 </UL>
-<P><STRONG><a name="[177]"></a>Z_Calib_Z_Upright_Neg1G</STRONG> (Thumb, 112 bytes, Stack size 0 bytes, eigenvalue calculation.o(i.Z_Calib_Z_Upright_Neg1G))
+<P><STRONG><a name="[177]"></a>Z_Calib_Z_Upright_Neg1G</STRONG> (Thumb, 76 bytes, Stack size 0 bytes, eigenvalue calculation.o(i.Z_Calib_Z_Upright_Neg1G))
 <BR><BR>[Called By]<UL><LI><a href="#[171]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Protocol_HandleRxFrame
 </UL>
 
@@ -2581,8 +2581,8 @@ Local Symbols
 <LI><a href="#[f0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Flash_WriteConfig
 </UL>
 
-<P><STRONG><a name="[ba]"></a>ACQ_ReprogramTimer</STRONG> (Thumb, 222 bytes, Stack size 48 bytes, app_acq.o(i.ACQ_ReprogramTimer))
-<BR><BR>[Stack]<UL><LI>Max Depth = 88<LI>Call Chain = ACQ_ReprogramTimer &rArr; __aeabi_uldivmod
+<P><STRONG><a name="[ba]"></a>Config_Timer</STRONG> (Thumb, 224 bytes, Stack size 56 bytes, app_acq.o(i.Config_Timer))
+<BR><BR>[Stack]<UL><LI>Max Depth = 96<LI>Call Chain = Config_Timer &rArr; __aeabi_uldivmod
 </UL>
 <BR>[Calls]<UL><LI><a href="#[a2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_uldivmod
 </UL>

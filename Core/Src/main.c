@@ -232,7 +232,7 @@ int main(void)
     }
     if (temp_state == 0) 
       {
-          if (now - temp_timer > 5000) // 每5秒发起一次
+          if (now - temp_timer > 10000) // 每10秒发起一次
           {
               Ds18b20_Start(); // 发送 0x44 
               temp_timer = now; // 记录发起时间

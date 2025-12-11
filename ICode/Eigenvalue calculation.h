@@ -55,9 +55,8 @@ void Eigen_Separate_And_Convert(uint16_t *pZBuf, uint16_t *pXYBuf);//转g
 void Calc_TimeDomain_Only(float32_t *data, uint32_t len, AxisFeatureValue *result);
 void Calc_FreqDomain_Z(float32_t *data, uint32_t len, float rotation_speed);
 void Calc_Envelope_Z(float32_t *data, uint32_t len);
+void Z_Calib_Z_Upright_Neg1G(float *gBuf, uint32_t N);
 float Tempetature_Dis(void);
-void Z_Calib_Z_Upright_Neg1G(uint16_t *adcBuf, uint32_t N);
-
 void print_g_data(float *buf, uint32_t N);
 void print_FEATURE();
 

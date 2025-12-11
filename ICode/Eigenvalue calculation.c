@@ -51,23 +51,20 @@ void Eigen_Separate_And_Convert(uint16_t *pZBuf, uint16_t *pXYBuf)
     }
 }
 
-void Z_Calib_Z_Upright_Neg1G(uint16_t *adcBuf, uint32_t N)
+void Z_Calib_Z_Upright_Neg1G(float *gBuf, uint32_t N)
 {
     float sum_g = 0.0f;
 
     for (uint32_t i = 0; i < N; ++i)
     {
-        // 按“未校准”的方式算出当前点的 g（不减 offset）
-        float vin   = (float)adcBuf[i] * Z_REF_VOLTAGE / Z_ADC_RESOLUTION;
-        float g_raw = (vin - Z_REF_VOLTAGE_BIAS) / Z_SENSITIVITY;
-        sum_g += g_raw;
+        sum_g += gBuf[i];
     }
 
-    float mean_g = sum_g / (float)N;
+    float mean_current = sum_g / (float)N;
 
-    // 你的机械姿态定义：正立 = -1g
     const float target_g = -1.0f;
-    g_z_offset_g = mean_g - target_g;
+
+    g_z_offset_g += (mean_current - target_g);
 }
 /*
 static inline CFFT_PTR_T pick_cfft_u32(uint32_t N)
