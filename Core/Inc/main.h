@@ -40,6 +40,7 @@ extern "C" {
 #include "flash.h"
 #include <stdbool.h>
 #include "app_acq.h"
+#include "arm_math.h"
 
 /* USER CODE END Includes */
 
@@ -80,14 +81,22 @@ void Error_Handler(void);
 #define LED_R_GPIO_Port GPIOE
 
 /* USER CODE BEGIN Private defines */
-#define RING           FFT_N_Z*2        	/* 2^n 最方便，≈80 KB */ 
-#define FFT_N_Z       4096 			  									// 你需要采集的点数
-#define FFT_N_XY  		 1024  							// 你需要采集的点数
-#define Z_Sample_freq  25600								// Z轴采集频率
-extern uint16_t  ADC_Buffer_Z[FFT_N_Z];    		// 用于存储Z轴数据
-extern uint16_t ADC_Buffer_XY[FFT_N_XY*2];				// 用于存储XY轴数据
+#define FFT_N_Z        4096 			  									// 浣犻渶瑕侀噰闆嗙殑鐐规暟
+#define FFT_N_XY  		 1024  							// 浣犻渶瑕侀噰闆嗙殑鐐规暟
+#define Z_Sample_freq  25598.36								// Z杞撮噰闆嗛鐜?
+extern uint16_t ADC_Buffer_Z[FFT_N_Z * 2];     
+extern uint16_t ADC_Buffer_XY[FFT_N_XY * 2 * 2];
+extern float Tx_Wave_Buffer_Z[FFT_N_Z];
+extern uint16_t Process_Buffer_Z[FFT_N_Z];
+extern uint16_t Process_Buffer_XY[FFT_N_XY * 2];
 
-//dma和modbus的缓冲区,串口3
+extern float32_t g_data_x[FFT_N_XY];
+extern float32_t g_data_y[FFT_N_XY];
+extern float32_t g_data_z[FFT_N_Z];
+
+
+
+//dma鍜宮odbus鐨勭紦鍐插尯,涓插彛3
 #define RX_DMA_BUF_SZ   256
 #define RX_FRAME_MAX    256
 extern uint8_t  rx_dma_buf[RX_DMA_BUF_SZ]; 
@@ -95,25 +104,15 @@ extern uint8_t  rx_frame_buf[RX_FRAME_MAX];
 extern volatile uint16_t rx_frame_len;
 extern volatile uint8_t  rx_frame_ready;
 
-//系统信息结构体
-typedef struct
-{
-	char szVersion[32];
-	char szBuildDate[32];
-	char szBuildTime[32];
-} AppInfo_t;
-
-//本机信息结构体
+//鏈満淇℃伅缁撴瀯浣?
 #define FLASH_CONFIG_ADDRESS 0x080E0000
 typedef struct {
-    uint8_t device_address;  // 设备地址
-    uint16_t num_samples;     // 采集点数
-    uint16_t sample_rate;     // 采集频率
+    uint8_t device_address;  // 璁惧鍦板潃
+    uint16_t num_samples;     // 閲囬泦鐐规暟
+    uint16_t sample_rate;     // 閲囬泦棰戠巼
 } Config_t;
 
-uint32_t get_wr_z(void);
-uint32_t get_wr_xy(void);
-uint32_t ring_distance(uint32_t wr, uint32_t rd);
+
 void Uart3_RxStart(void);
 
 /* USER CODE END Private defines */

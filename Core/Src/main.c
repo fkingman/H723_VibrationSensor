@@ -51,24 +51,34 @@ uint16_t wave_points = FLASH_CFG_DEFAULT_POINTS;
 
 //组态结构体
 Config_t device_config;
-//Z_ADC
-__attribute__((section(".RAM_D2"))) uint16_t  ADC_Buffer_Z[FFT_N_Z];    		// 用于存储Z轴数据
-volatile uint32_t write_index_Z = 0;  	// Z轴写指针
-volatile uint32_t read_index_Z = 0;  		// Z轴读指针
-volatile uint8_t flag_Z = 0;   					// Z轴标志位
-//volatile uint16_t adc_ring_z[RING];  // Z 轴环形缓冲区
-volatile uint32_t rd_z = 0;  // Z 轴读指针
-volatile uint32_t wr_z = 0;  // Z 轴写指针
-volatile uint32_t sampleCount = 0;  // 记录已采集的数据点数
+//ADC
+__attribute__((section(".RAM_D2"))) uint16_t ADC_Buffer_Z[FFT_N_Z * 2];// Z轴8192点乒乓结构
+__attribute__((section(".RAM_D2"))) uint16_t ADC_Buffer_XY[FFT_N_XY * 2 * 2];// XY轴(1024点 * 2通道) * 2 = 4096点乒乓
+__attribute__((section(".RAM_D2"))) float Tx_Wave_Buffer_Z[FFT_N_Z];// 专门用于发送的“冷数据”区
+uint16_t Process_Buffer_Z[FFT_N_Z];                   // Z轴计算区
+uint16_t Process_Buffer_XY[FFT_N_XY * 2];             // XY轴计算区
 
-//XY_ADC
-//volatile uint16_t adc_ring_xy[RING]; // XY 轴环形缓冲区static uint32_t rd_z = 0;   
-__attribute__((section(".RAM_D2"))) uint16_t ADC_Buffer_XY[FFT_N_XY*2];				// 用于存储XY轴数据
-volatile uint32_t write_index_XY = 0;   // XY轴写指针
-volatile uint32_t read_index_XY = 0;  	// XY轴读指针
-volatile uint8_t flag_XY = 0;  					// XY轴标志位
-volatile uint32_t rd_xy = 0; // XY 轴读指针
-volatile uint32_t wr_xy = 0; // XY 轴写指针
+float32_t g_data_x[FFT_N_XY];  // 对应 X 轴点数
+float32_t g_data_y[FFT_N_XY];  // 对应 Y 轴点数
+float32_t g_data_z[FFT_N_Z];   // 对应 Z 轴点数
+
+AxisFeatureValue X_data;
+AxisFeatureValue Y_data;
+AxisFeatureValue Z_data;
+
+typedef enum {
+    BUFFER_IDLE = 0,
+    BUFFER_HALF_READY, // 前半段好了
+    BUFFER_FULL_READY  // 后半段好了
+} BufferState_t;
+
+volatile BufferState_t z_buffer_state = BUFFER_IDLE;
+volatile BufferState_t xy_buffer_state = BUFFER_IDLE;
+
+volatile uint8_t z_data_ready_flag = 0;
+volatile uint8_t xy_data_ready_flag = 0;
+
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -121,28 +131,12 @@ void Uart3_RxStart(void)
 		HAL_UART_Receive_DMA(&huart3, rx_dma_buf, RX_DMA_BUF_SZ);
 }
 
-uint32_t get_wr_z(void)
-{
-    return RING - __HAL_DMA_GET_COUNTER(&hdma_adc1);  // 获取 Z 轴的写指针
-}
-
-uint32_t get_wr_xy(void)
-{
-    return RING - __HAL_DMA_GET_COUNTER(&hdma_adc2);  // 获取 XY 轴的写指针
-}
-
-uint32_t ring_distance(uint32_t wr, uint32_t rd)
-{
-    return (wr >= rd) ? (wr - rd) : (RING - rd + wr);  // 返回可用数据点数
-}
-
-
 void Start_ADC_DMA(void)
 {
 	  HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
 		HAL_ADCEx_Calibration_Start(&hadc2, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
-    HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADC_Buffer_Z, FFT_N_Z);  // Z 轴
-    HAL_ADC_Start_DMA(&hadc2, (uint32_t*)ADC_Buffer_XY, FFT_N_XY*2); // XY 轴
+    HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADC_Buffer_Z, FFT_N_Z * 2);
+    HAL_ADC_Start_DMA(&hadc2, (uint32_t*)ADC_Buffer_XY, FFT_N_XY * 2 * 2);
 	  HAL_TIM_Base_Start(&htim2);
 		HAL_TIM_Base_Start(&htim3);
 }
@@ -153,8 +147,6 @@ void Stop_ADC_DMA(void)
     HAL_ADC_Stop_DMA(&hadc2);
     HAL_TIM_Base_Stop(&htim2);
     HAL_TIM_Base_Stop(&htim3);	
-		flag_XY = 0;
-		flag_Z  = 0;
 }
 
 /* USER CODE END 0 */
@@ -204,11 +196,10 @@ int main(void)
 	//使能串口中断和接收
 	Uart3_RxStart();
 	App_ConfigInit();
-	Vib_Filter_Init();
+	Calc_Init();
 	Ds18b20_Init();
+  Start_ADC_DMA();
 	rx_frame_ready = 0;
-	flag_XY = 0;
-	flag_Z = 0;
 
   /* USER CODE END 2 */
 
@@ -219,30 +210,25 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    if (rx_frame_ready) 
+      {
+        rx_frame_ready = 0;  
+        // 此时直接回复 X_data/Z_data，这些变量保存的是“上一次计算”的结果
+        Protocol_HandleRxFrame(rx_frame_buf, rx_frame_len, LOCAL_DEVICE_ADDR);
+      }
 
-        if (rx_frame_ready) 
-				{
-					  rx_frame_ready = 0;  
-						const uint8_t target_address = rx_frame_buf[0];
-            const uint8_t cmd    = rx_frame_buf[1];
-					  if (target_address == LOCAL_DEVICE_ADDR && (cmd == CMD_FEATURE || cmd == CMD_WAVE|| cmd == CMD_CALIBRATION||cmd == CMD_TEST )) 
-						{
-							Start_ADC_DMA();
-							uint32_t t0 = HAL_GetTick();
-							while (!(flag_XY && flag_Z)) 
-							{
-								if (HAL_GetTick() - t0 > 5000) // 5000ms 超时
-								{   
-									Stop_ADC_DMA();// 这里可以打印一条错误，或者设置一个 error_flag
-									break;
-								}
-							}
-							HAL_Delay(10);
-							Stop_ADC_DMA();
-							Process_Data();	
-						}							
-            Protocol_HandleRxFrame(rx_frame_buf, rx_frame_len, LOCAL_DEVICE_ADDR);
-         }
+    if (z_data_ready_flag && xy_data_ready_flag)
+    {
+        // 清除标志位
+        __disable_irq();
+        z_data_ready_flag = 0;
+        xy_data_ready_flag = 0;
+        __enable_irq();
+
+        Process_Data(Process_Buffer_Z, Process_Buffer_XY);
+        memcpy(Tx_Wave_Buffer_Z, g_data_z, sizeof(Tx_Wave_Buffer_Z)); 
+
+    }  
 	}
   /* USER CODE END 3 */
 }
@@ -258,7 +244,7 @@ void SystemClock_Config(void)
 
   /** Supply configuration update enable
   */
-  HAL_PWREx_ConfigSupply(PWR_LDO_ SUPPLY);
+  HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
 
   /** Configure the main internal regulator output voltage
   */
@@ -332,32 +318,59 @@ void PeriphCommonClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+//半传输完成回调 BufferA
+void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
+{
+    // Z 轴处理
+    if (hadc->Instance == ADC1) 
+    {
+        // 使得 Cache 无效化（如果开启了 D-Cache），确保 CPU 读取到 DMA 写入的最新数据
+        SCB_InvalidateDCache_by_Addr((uint32_t*)&ADC_Buffer_Z[0], FFT_N_Z * 2);
+
+        // 【核心操作】把前半段 (0 ~ N-1) 拷贝到计算区
+        memcpy(Process_Buffer_Z, &ADC_Buffer_Z[0], FFT_N_Z * sizeof(uint16_t));
+        
+        z_data_ready_flag = 1; // 通知主循环
+    }
+    // XY 轴处理
+    else if (hadc->Instance == ADC2)
+    {
+        SCB_InvalidateDCache_by_Addr((uint32_t*)&ADC_Buffer_XY[0], FFT_N_XY * 2 * 2);
+
+        // XY 是交错的，前半段长度是 FFT_N_XY * 2
+        memcpy(Process_Buffer_XY, &ADC_Buffer_XY[0], (FFT_N_XY * 2) * sizeof(uint16_t));
+        
+        xy_data_ready_flag = 1;
+    }
+}
+
+// DMA填满了后半段 BufferB
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
-		if (hadc->Instance == ADC1) 
-		{
-        flag_Z = 1;
-
-    } else if (hadc->Instance == ADC2) 
-		{
-        flag_XY = 1;
-    }
-}
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
-{
-    if (huart == &huart3)
+    // Z 轴处理
+    if (hadc->Instance == ADC1) 
     {
-        g_tx_busy = 0;
+        // 使得 Cache 无效化
+        SCB_InvalidateDCache_by_Addr((uint32_t*)&ADC_Buffer_Z[FFT_N_Z], FFT_N_Z * 2);
+
+        // 把后半段 (N ~ 2N-1) 拷贝到计算区
+        // 注意源地址偏移了 FFT_N_Z
+        memcpy(Process_Buffer_Z, &ADC_Buffer_Z[FFT_N_Z], FFT_N_Z * sizeof(uint16_t));
+        
+        z_data_ready_flag = 1; // 通知主循环
+    }
+    // XY 轴处理
+    else if (hadc->Instance == ADC2) 
+    {
+        SCB_InvalidateDCache_by_Addr((uint32_t*)&ADC_Buffer_XY[FFT_N_XY * 2], FFT_N_XY * 2 * 2);
+
+        // 源地址偏移 FFT_N_XY * 2
+        memcpy(Process_Buffer_XY, &ADC_Buffer_XY[FFT_N_XY * 2], (FFT_N_XY * 2) * sizeof(uint16_t));
+        
+        xy_data_ready_flag = 1;
     }
 }
 
-void HAL_DMA_ErrorCallback(DMA_HandleTypeDef *hdma){
-//    printf("DMA ERR: 0x%lx\r\n", (unsigned long)hdma->ErrorCode);
-}
-
-void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc){
-//    printf("ADC ERR: 0x%lx\r\n", (unsigned long)hadc->ErrorCode);
-}
 
 /* USER CODE END 4 */
 
