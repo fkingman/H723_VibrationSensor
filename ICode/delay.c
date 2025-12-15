@@ -1,50 +1,25 @@
-#include "main.h"
-/*
-优点：全系列通用，只需要将宏定义CPU_FREQUENCY_MHZ根据时钟主频修改即可。
-缺点：系统滴答定时器是HAL库初始化的，且必须有HAL库初始化。
-*/
-#define CPU_FREQUENCY_MHZ    64		// STM32时钟主频
-void _delay_us(__IO uint32_t delay)
+#include "delay.h"
+
+void Delay_Init(void)
 {
-    int last, curr, val;
-    int temp;
-
-    while (delay != 0)
-    {
-        temp = delay > 900 ? 900 : delay;
-        last = SysTick->VAL;
-        curr = last - CPU_FREQUENCY_MHZ * temp;
-        if (curr >= 0)
-        {
-            do
-            {
-                val = SysTick->VAL;
-            }
-            while ((val < last) && (val >= curr));
-        }
-        else
-        {
-            curr += CPU_FREQUENCY_MHZ * 1000;
-            do
-            {
-                val = SysTick->VAL;
-            }
-            while ((val <= last) || (val > curr));
-        }
-        delay -= temp;
-    }
+    /* 1. 开启 CoreDebug 中的 DWT 追踪功能 (TRCENA) */
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk; 
+    
+    /* 2. 清空计数器 CYCCNT */
+    DWT->CYCCNT = 0;
+    
+    /* 3. 开启 CYCCNT 计数功能 */
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 }
-/*
-优点： 实现简单，如果是F1系列，HAL_RCC_GetHCLKFreq()获取的值是72000000，此方式经过测试还是比较准的，如果不考虑通用性，F1系列建议使用此种方式。
 
-缺点： 只适用F1系列72M主频。
-*/
 void delay_us(uint32_t us)
 {
-    uint32_t delay = (HAL_RCC_GetHCLKFreq() / 4000000 * us);
-    while (delay--)
-    {
-        ;
-    }
-}
+    uint32_t start_tick = DWT->CYCCNT;
+    
+    /* 400MHz 主频下，1us = 400 个 Tick */
+    /* 使用 SystemCoreClock 变量可以自适应频率变化，或者直接写 400 */
+    uint32_t wait_ticks = us * (SystemCoreClock / 1000000U); 
 
+    /* 循环等待直到计数差值达到目标 ticks (自动处理溢出) */
+    while ((DWT->CYCCNT - start_tick) < wait_ticks);
+}

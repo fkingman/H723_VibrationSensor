@@ -37,8 +37,8 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 //U3接收
-__attribute__((section(".RAM_D2"))) uint8_t rx_dma_buf[RX_DMA_BUF_SZ];
-__attribute__((section(".RAM_D2"))) uint8_t rx_frame_buf[RX_FRAME_MAX];
+__attribute__((section(".ARM.__at_0x24010000"))) uint8_t rx_dma_buf[RX_DMA_BUF_SZ];
+__attribute__((section(".ARM.__at_0x24010100"))) uint8_t rx_frame_buf[RX_FRAME_MAX];
 volatile uint16_t rx_frame_len = 0;
 volatile uint8_t  rx_frame_ready = 0;
 
@@ -52,9 +52,9 @@ uint16_t wave_points = FLASH_CFG_DEFAULT_POINTS;
 //组态结构体
 Config_t device_config;
 //ADC
-__attribute__((section(".RAM_D2"))) uint16_t ADC_Buffer_Z[FFT_N_Z * 2];// Z轴8192点乒乓结构
-__attribute__((section(".RAM_D2"))) uint16_t ADC_Buffer_XY[FFT_N_XY * 2 * 2];// XY轴(1024点 * 2通道) * 2 = 4096点乒乓
-__attribute__((section(".RAM_D2"))) float Tx_Wave_Buffer_Z[FFT_N_Z];// 专门用于发送的“冷数据”区
+__attribute__((section(".ARM.__at_0x24000000"))) uint16_t ADC_Buffer_Z[FFT_N_Z * 2];// Z轴8192点乒乓结构
+__attribute__((section(".ARM.__at_0x24004000"))) uint16_t ADC_Buffer_XY[FFT_N_XY * 2 * 2];// XY轴(1024点 * 2通道) * 2 = 4096点乒乓
+__attribute__((section(".ARM.__at_0x2400C000"))) float Tx_Wave_Buffer_Z[FFT_N_Z];// 专门用于发送的“冷数据”区
 uint16_t Process_Buffer_Z[FFT_N_Z];                   // Z轴计算区
 uint16_t Process_Buffer_XY[FFT_N_XY * 2];             // XY轴计算区
 
@@ -137,12 +137,17 @@ void Uart3_RxStart(void)
 
 void Start_ADC_DMA(void)
 {
+	  HAL_TIM_Base_Stop(&htim2);
+    HAL_TIM_Base_Stop(&htim3);
+//		TIM2->CR2 &= ~TIM_CR2_MMS;       // 清除旧配置
+//    TIM2->CR2 |= TIM_CR2_MMS_1;      // 设置为 010 (Update Event)
 	  HAL_ADCEx_Calibration_Start(&hadc1, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
 		HAL_ADCEx_Calibration_Start(&hadc2, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED);
     HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADC_Buffer_Z, FFT_N_Z * 2);
     HAL_ADC_Start_DMA(&hadc2, (uint32_t*)ADC_Buffer_XY, FFT_N_XY * 2 * 2);
 	  HAL_TIM_Base_Start(&htim2);
 		HAL_TIM_Base_Start(&htim3);
+		__NOP();
 }
 
 void Stop_ADC_DMA(void)
@@ -163,7 +168,11 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+	SCB->VTOR = 0x08020000;//中断向量表偏移
+	//HAL_MPU_Disable();
+	//SCB_DisableDCache();
+	//MPU_Config();
+	//SCB_DisableDCache();
   /* USER CODE END 1 */
 
   /* MPU Configuration--------------------------------------------------------*/
@@ -185,6 +194,7 @@ int main(void)
   PeriphCommonClock_Config();
 
   /* USER CODE BEGIN SysInit */
+	Delay_Init();
 
   /* USER CODE END SysInit */
 
@@ -198,15 +208,20 @@ int main(void)
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 	//使能串口中断和接收
+	__enable_irq();
 	Uart3_RxStart();
 	App_ConfigInit();
 	Calc_Init();
 	Ds18b20_Init();
   Start_ADC_DMA();
 	rx_frame_ready = 0;
-
+	uint8_t debug_msg[] = "\r\n[APP] App Init OK! Waiting for loop...\r\n";
+	HAL_UART_Transmit(&huart3, debug_msg, sizeof(debug_msg)-1, 100);
   /* USER CODE END 2 */
-
+	uint8_t debug_msg2[] = "[APP] Enter Main Loop\r\n";
+	HAL_UART_Transmit(&huart3, debug_msg2, sizeof(debug_msg2)-1, 100);
+	printf("BufZ Addr: %p\r\n", ADC_Buffer_Z);
+	printf("BufXY Addr: %p\r\n", ADC_Buffer_XY);
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -405,35 +420,39 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
     }
 }
 
+
+
 /* USER CODE END 4 */
 
  /* MPU Configuration */
+
+// Core/Src/main.c
 
 void MPU_Config(void)
 {
   MPU_Region_InitTypeDef MPU_InitStruct = {0};
 
-  /* Disables the MPU */
+  // 1. 先禁止 MPU
   HAL_MPU_Disable();
 
-  /** Initializes and configures the Region and the memory to be protected
-  */
+  // 2. 配置 Region 0: 将 AXI SRAM 前 128KB 设为 "Non-Cacheable"
+  // 范围：0x24000000 ~ 0x2401FFFF (刚好覆盖你的三个数组)
   MPU_InitStruct.Enable = MPU_REGION_ENABLE;
   MPU_InitStruct.Number = MPU_REGION_NUMBER0;
-  MPU_InitStruct.BaseAddress = 0x0;
-  MPU_InitStruct.Size = MPU_REGION_SIZE_4GB;
-  MPU_InitStruct.SubRegionDisable = 0x87;
-  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
-  MPU_InitStruct.AccessPermission = MPU_REGION_NO_ACCESS;
-  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_DISABLE;
+  MPU_InitStruct.BaseAddress = 0x24000000;
+  MPU_InitStruct.Size = MPU_REGION_SIZE_128KB; // 覆盖 128KB 的数据区
+  MPU_InitStruct.SubRegionDisable = 0x0;
+  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL1; // TEX=1
+  MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
+  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
   MPU_InitStruct.IsShareable = MPU_ACCESS_SHAREABLE;
-  MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
-  MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
+  MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE; // 关键！关Cache
+  MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE; // 关Buffer
 
   HAL_MPU_ConfigRegion(&MPU_InitStruct);
-  /* Enables the MPU */
-  HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
 
+  // 3. 开启 MPU
+  HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
 }
 
 /**

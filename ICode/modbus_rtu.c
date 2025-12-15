@@ -173,7 +173,7 @@ enum { CRC_LEN       = 2  };
 enum { FRAME_LEN     = FRAME_NOCRC + CRC_LEN };  // 260 + 2 = 262
 
 /* 帧：dev_id | CMD_WAVE  | seq(1B) |total_pkts(1B) | 64×float(BE) | CRC(LE) */
-static void send_wave_pkt(uint8_t dev_id, const float *buf, uint8_t total_pkts, uint8_t seq)
+static void send_wave_pkt(uint8_t dev_id, const float *buf, uint8_t seq, uint8_t total_pkts)
 {
     if (!buf) return;
 
@@ -184,7 +184,7 @@ static void send_wave_pkt(uint8_t dev_id, const float *buf, uint8_t total_pkts, 
 	
 		/* 头部 4B */
 		*p++ = dev_id;        // 1B
-		*p++ = CMD_WAVE;      // 1B
+		*p++ = CMD_WAVE_PACK;      // 1B
 		*p++ = seq;           // 1B，当前序号
 		*p++ = total_pkts;    // 1B，总包数
 
@@ -368,6 +368,115 @@ static void CALIBRATION_Config_SendAck(uint8_t dev_id)
 //		HAL_UART_Transmit_DMA(&huart3, tx, (uint16_t)(p - tx));
 		uart3_send_dma(tx, (uint16_t)(p - tx));	
 }
+
+/**********************************OTA处理函数**********************************/
+// 1. 处理 OTA 开始命令
+// 主机发送: [DevID] [0x50] [Len(4B)] [CRC]
+static void Handle_OTA_Start(uint8_t dev_id, const uint8_t *rx_data)
+{
+    // 解析固件总长度 (大端)
+    uint32_t total_len = rd_be32(rx_data);
+    
+    // 简单检查长度 (H723 下载区 384KB)
+    if (total_len == 0 || total_len > (384 * 1024)) return;
+
+    // 解锁 Flash
+    HAL_FLASH_Unlock();
+    
+    // 擦除下载区 (Sector 4, 5, 6)
+    // 注意：擦除 384KB 可能需要几秒钟，这期间会阻塞主循环
+    FLASH_EraseInitTypeDef EraseInitStruct;
+    uint32_t SectorError;
+
+    EraseInitStruct.TypeErase     = FLASH_TYPEERASE_SECTORS;
+    EraseInitStruct.Banks         = FLASH_BANK_1;
+    EraseInitStruct.Sector        = FLASH_SECTOR_4; // 从 Sector 4 开始
+    EraseInitStruct.NbSectors     = 3;              // 擦除 4, 5, 6
+    EraseInitStruct.VoltageRange  = FLASH_VOLTAGE_RANGE_3;
+
+    if (HAL_FLASHEx_Erase(&EraseInitStruct, &SectorError) == HAL_OK)
+    {
+        // 擦除成功，回复 ACK
+        static uint8_t tx[7];uint8_t *p = tx;
+        *p++ = dev_id; *p++ = CMD_OTA_START; *p++ = 0x02; *p++ = 0x4F; *p++ = 0x4B; // 4F4B OK
+        uint16_t crc = Modbus_CRC16(tx, (uint16_t)(p - tx));
+        *p++ = (uint8_t)crc; *p++ = (uint8_t)(crc >> 8);
+				uart3_send_dma(tx, (uint16_t)(p - tx));		
+    }
+    
+    HAL_FLASH_Lock();
+}
+
+// 2. 处理 OTA 数据包
+// 主机发送: [DevID] [0x51] [Offset(4B)] [Data(N...)] [CRC]
+static void Handle_OTA_Data(uint8_t dev_id, const uint8_t *rx_data, uint16_t data_len)
+{
+    // rx_data 指向 Offset，后面是数据
+    // Modbus 帧里除去了头部和 CRC，剩下的长度 = 4(Offset) + N(Data)
+    if (data_len <= 4) return;
+    
+    uint32_t offset = rd_be32(rx_data);
+    const uint8_t *pData = rx_data + 4;
+    uint16_t payload_len = data_len - 4;
+
+    // 计算写入目标地址
+    uint32_t target_addr = OTA_DOWNLOAD_ADDR + offset;
+    
+    HAL_FLASH_Unlock();
+
+    // 循环写入 (Flash Word = 32 Bytes)
+    // 注意：H7 要求 32 字节对齐。如果上位机发的包不是 32 的倍数，这里需要特殊处理
+    // 建议上位机每次发 64, 128, 256 字节
+		uint32_t flash_word_buf[8]; // 8 * 4 = 32 bytes
+    for (uint32_t i = 0; i < payload_len; i += 32)
+    {
+				memset(flash_word_buf, 0xFF, 32);
+				uint32_t copy_len = (payload_len - i) >= 32 ? 32 : (payload_len - i);
+				memcpy(flash_word_buf, &pData[i], copy_len);
+        // 必须确保剩余数据够 32 字节，如果不够，需填充 0xFF (这里简化处理，假设上位机已对齐)
+        if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_FLASHWORD, target_addr + i, (uint32_t)flash_word_buf) != HAL_OK)
+        {
+            HAL_FLASH_Lock();
+            return; // 写入失败
+        }
+    }
+    
+    HAL_FLASH_Lock();
+
+    // 回复 ACK: [DevID] [0x51] [Offset(4B)] [CRC]
+    static uint8_t tx[8]; 
+    tx[0] = dev_id; tx[1] = CMD_OTA_DATA;
+    wr_be32(&tx[2], offset); // 原样返回偏移量确认
+		
+    uint16_t crc = Modbus_CRC16(tx, 6);
+    tx[6] = (uint8_t)crc; tx[7] = (uint8_t)(crc >> 8);
+    
+		uart3_send_dma(tx, 8);		
+}
+
+// 3. 处理 OTA 结束命令
+// 主机发送: [DevID] [0x52] [TotalLen(4B)] [CRC]
+static void Handle_OTA_End(uint8_t dev_id, const uint8_t *rx_data)
+{
+    uint32_t fw_len = rd_be32(rx_data);
+
+    // 1. 回复 ACK (必须先回复，因为一会要重启了)
+		static uint8_t tx[7];uint8_t *p = tx;
+		*p++ = dev_id; *p++ = CMD_OTA_START; *p++ = 0x02; *p++ = 0x4F; *p++ = 0x4B; // 4F4B OK
+		uint16_t crc = Modbus_CRC16(tx, (uint16_t)(p - tx));
+		*p++ = (uint8_t)crc; *p++ = (uint8_t)(crc >> 8);
+	
+    // 使用阻塞发送，确保重启前发出去
+    HAL_UART_Transmit(&huart3, tx, 7, 100); 
+
+    // 2. 设置标志位 (请求 Bootloader 升级)
+    Flash_SetOTAInfo(OTA_FLAG_UPDATE_NEEDED, fw_len);
+
+    // 3. 重启
+    HAL_Delay(100);
+    HAL_NVIC_SystemReset();
+}
+
 /**********************************帧处理**********************************/
 void Protocol_HandleRxFrame(const uint8_t *rx, uint16_t len, uint8_t local_address)
 {
@@ -426,7 +535,10 @@ void Protocol_HandleRxFrame(const uint8_t *rx, uint16_t len, uint8_t local_addre
         case CH_Z3: print_g_data(g_data_z,600); break;					
         default: break;
         }
-        break;	
+        break;
+		case CMD_OTA_START:	Handle_OTA_Start(dev_id, &rx[2]);break;
+		case CMD_OTA_DATA:Handle_OTA_Data(dev_id, &rx[2], len - 4);break;
+		case CMD_OTA_END:	Handle_OTA_End(dev_id, &rx[2]);break;
 		default:
 //        Protocol_SendNack(dev_id, cmd, PKT_ERR_CMD);            
         break;

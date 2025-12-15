@@ -5,13 +5,15 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define OTA_DOWNLOAD_ADDR  0x08080000 // OTA下载区
+
 /*
 XY: mean RMS PP 
 Z:	mean RMS PP Displacement_PP Envelope_Vrms Envelope_Peak
 */
 
 /* ────────── Command 定义 ────────── */
-#define CMD_CONFIG       0x00     /* 配置请求  */
+#define CMD_CONFIG       0x87     /* 频率请求  */
 #define CMD_FEATURE      0x02     /* 特征值请求  */
 #define CMD_WAVE_PACK    0x03     /* 波形包请求  */
 #define CMD_WAVE         0x04     /* 波形请求    */
@@ -20,6 +22,9 @@ Z:	mean RMS PP Displacement_PP Envelope_Vrms Envelope_Peak
 #define CMD_SET_ADDR  	 0x42   	 /* 主站广播给某uid配置地址*/
 #define CMD_CALIBRATION  0x60   	 /* 校准请求*/
 #define CMD_WRONG        0x80     /* 错误 */
+#define CMD_OTA_START    0x50   // 开始升级 (参数: 固件总长度)
+#define CMD_OTA_DATA     0x51   // 传输数据 (参数: 偏移量 + 数据)
+#define CMD_OTA_END      0x52   // 结束升级 (参数: CRC校验 / 直接重启)
 
 /* ────────── TEST Channel 定义 ────────── */
 #define CH_X         		 		0x01

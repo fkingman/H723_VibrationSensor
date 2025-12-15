@@ -71,12 +71,6 @@ virtualFolder:
         - path: ../ICode/bytes.h
         - path: ../ICode/app_acq.c
         - path: ../ICode/modbus_rtu.c
-        - path: ../ICode/app_acq.h
-        - path: ../ICode/delay.h
-        - path: ../ICode/Eigenvalue calculation.h
-        - path: ../ICode/flash.h
-        - path: ../ICode/modbus_rtu.h
-        - path: ../ICode/Ds18b20.h
       folders: []
     - name: ::CMSIS
       files: []
@@ -199,8 +193,8 @@ targets:
               isChecked: true
               isStartup: true
               mem:
-                size: "0x100000"
-                startAddr: "0x8000000"
+                size: "0x60000"
+                startAddr: "0x8020000"
               tag: IROM
             - id: 2
               isChecked: false

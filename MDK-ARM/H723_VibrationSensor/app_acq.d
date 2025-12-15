@@ -54,3 +54,4 @@ h723_vibrationsensor\app_acq.o: D:\Keil5\ARM\ARM_Compiler_5.06u7\Bin\..\include\
 h723_vibrationsensor\app_acq.o: ../ICode/DS18B20.h
 h723_vibrationsensor\app_acq.o: ../ICode/delay.h
 h723_vibrationsensor\app_acq.o: ../ICode/flash.h
+h723_vibrationsensor\app_acq.o: ../ICode/app_acq.h

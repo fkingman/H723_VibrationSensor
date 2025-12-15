@@ -41,4 +41,3 @@ h723_vibrationsensor\flash.o: ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_
 h723_vibrationsensor\flash.o: ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h
 h723_vibrationsensor\flash.o: D:\Keil5\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdbool.h
 h723_vibrationsensor\flash.o: D:\Keil5\ARM\ARM_Compiler_5.06u7\Bin\..\include\string.h
-h723_vibrationsensor\flash.o: ..\ICode\bytes.h

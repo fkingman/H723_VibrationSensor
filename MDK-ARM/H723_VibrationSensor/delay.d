@@ -1,4 +1,5 @@
 h723_vibrationsensor\delay.o: ..\ICode\delay.c
+h723_vibrationsensor\delay.o: ..\ICode\delay.h
 h723_vibrationsensor\delay.o: ../Core/Inc/main.h
 h723_vibrationsensor\delay.o: ../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h
 h723_vibrationsensor\delay.o: ../Core/Inc/stm32h7xx_hal_conf.h

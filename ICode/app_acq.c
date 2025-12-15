@@ -32,7 +32,8 @@ static HAL_StatusTypeDef Config_Timer(TIM_HandleTypeDef *htim, uint32_t freq_hz)
 
     // 如果 total_div 超过了当前的 ARR 上限，就需要增加 PSC
     // (PSC+1) = Total_Div / (ARR_Max + 1)
-    uint32_t psc_plus_1 = total_div / (max_arr + 1) + 1;
+		uint64_t limit_div = (uint64_t)max_arr + 1;
+    uint32_t psc_plus_1 = (uint32_t)(total_div / limit_div) + 1;
     
     psc = psc_plus_1 - 1;
     // 限制 PSC 也是 16 位的

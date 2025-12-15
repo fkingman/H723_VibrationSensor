@@ -1,15 +1,12 @@
-/*
- * delay.h
- *
- *  Created on: 2023年5月29日
- *      Author: xiaolinji
- */
-
 #ifndef DELAY_H_
 #define DELAY_H_
 
 #include "main.h"
 
-void delay_us(__IO uint32_t delay);
-void _delay_us(__IO uint32_t delay);
+/* 初始化函数，务必在 main() 开头调用 */
+void Delay_Init(void);
+
+/* 延时函数 */
+void delay_us(uint32_t us);
+
 #endif /* DELAY_H_ */

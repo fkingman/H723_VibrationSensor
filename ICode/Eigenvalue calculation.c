@@ -28,7 +28,7 @@ static inline float Zcode_to_g(uint16_t code)
 {
     float vin = (float)code * Z_REF_VOLTAGE / Z_ADC_RESOLUTION;
     float g_raw = (vin - Z_REF_VOLTAGE_BIAS) / Z_SENSITIVITY;
-	return g_raw - g_z_offset_g ;     // 减掉偏移
+		return g_raw - g_z_offset_g;     // 减掉偏移
 }
 static inline float XYcode_to_g(uint16_t code)
 {
