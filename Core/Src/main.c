@@ -38,7 +38,7 @@
 /* USER CODE BEGIN PD */
 //U3Ω” ’
 __attribute__((section(".ARM.__at_0x24010000"))) uint8_t rx_dma_buf[RX_DMA_BUF_SZ];
-__attribute__((section(".ARM.__at_0x24010100"))) uint8_t rx_frame_buf[RX_FRAME_MAX];
+__attribute__((section(".ARM.__at_0x24010200"))) uint8_t rx_frame_buf[RX_FRAME_MAX];
 volatile uint16_t rx_frame_len = 0;
 volatile uint8_t  rx_frame_ready = 0;
 
@@ -215,13 +215,8 @@ int main(void)
 	Ds18b20_Init();
   Start_ADC_DMA();
 	rx_frame_ready = 0;
-	uint8_t debug_msg[] = "\r\n[APP] App Init OK! Waiting for loop...\r\n";
-	HAL_UART_Transmit(&huart3, debug_msg, sizeof(debug_msg)-1, 100);
   /* USER CODE END 2 */
-	uint8_t debug_msg2[] = "[APP] Enter Main Loop\r\n";
-	HAL_UART_Transmit(&huart3, debug_msg2, sizeof(debug_msg2)-1, 100);
-	printf("BufZ Addr: %p\r\n", ADC_Buffer_Z);
-	printf("BufXY Addr: %p\r\n", ADC_Buffer_XY);
+	
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)

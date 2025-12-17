@@ -30,16 +30,7 @@ Rebuild target 'H723_VibrationSensor'
 assembling startup_stm32h723xx.s...
 compiling stm32h7xx_hal_rcc.c...
 compiling stm32h7xx_hal_adc_ex.c...
-compiling tim.c...
-../ICode/Eigenvalue calculation.h(61): warning:  #1295-D: Deprecated declaration print_FEATURE - give arg types
-  void print_FEATURE();
-../ICode/delay.h(12): warning:  #1-D: last line of file ends without a newline
-  #endif /* DELAY_H_ */
-../ICode/flash.h(75): warning:  #1-D: last line of file ends without a newline
-  #endif /* __FLASH_H__ */
-../ICode/app_acq.h(33): warning:  #1-D: last line of file ends without a newline
-  #endif
-../Core/Src/tim.c: 4 warnings, 0 errors
+compiling stm32h7xx_hal_flash.c...
 compiling gpio.c...
 ../ICode/Eigenvalue calculation.h(61): warning:  #1295-D: Deprecated declaration print_FEATURE - give arg types
   void print_FEATURE();
@@ -50,6 +41,47 @@ compiling gpio.c...
 ../ICode/app_acq.h(33): warning:  #1-D: last line of file ends without a newline
   #endif
 ../Core/Src/gpio.c: 4 warnings, 0 errors
+compiling tim.c...
+../ICode/Eigenvalue calculation.h(61): warning:  #1295-D: Deprecated declaration print_FEATURE - give arg types
+  void print_FEATURE();
+../ICode/delay.h(12): warning:  #1-D: last line of file ends without a newline
+  #endif /* DELAY_H_ */
+../ICode/flash.h(75): warning:  #1-D: last line of file ends without a newline
+  #endif /* __FLASH_H__ */
+../ICode/app_acq.h(33): warning:  #1-D: last line of file ends without a newline
+  #endif
+../Core/Src/tim.c: 4 warnings, 0 errors
+compiling adc.c...
+../ICode/Eigenvalue calculation.h(61): warning:  #1295-D: Deprecated declaration print_FEATURE - give arg types
+  void print_FEATURE();
+../ICode/delay.h(12): warning:  #1-D: last line of file ends without a newline
+  #endif /* DELAY_H_ */
+../ICode/flash.h(75): warning:  #1-D: last line of file ends without a newline
+  #endif /* __FLASH_H__ */
+../ICode/app_acq.h(33): warning:  #1-D: last line of file ends without a newline
+  #endif
+../Core/Src/adc.c: 4 warnings, 0 errors
+compiling stm32h7xx_it.c...
+../ICode/Eigenvalue calculation.h(61): warning:  #1295-D: Deprecated declaration print_FEATURE - give arg types
+  void print_FEATURE();
+../ICode/delay.h(12): warning:  #1-D: last line of file ends without a newline
+  #endif /* DELAY_H_ */
+../ICode/flash.h(75): warning:  #1-D: last line of file ends without a newline
+  #endif /* __FLASH_H__ */
+../ICode/app_acq.h(33): warning:  #1-D: last line of file ends without a newline
+  #endif
+../Core/Src/stm32h7xx_it.c: 4 warnings, 0 errors
+compiling dma.c...
+../ICode/Eigenvalue calculation.h(61): warning:  #1295-D: Deprecated declaration print_FEATURE - give arg types
+  void print_FEATURE();
+../ICode/delay.h(12): warning:  #1-D: last line of file ends without a newline
+  #endif /* DELAY_H_ */
+../ICode/flash.h(75): warning:  #1-D: last line of file ends without a newline
+  #endif /* __FLASH_H__ */
+../ICode/app_acq.h(33): warning:  #1-D: last line of file ends without a newline
+  #endif
+../Core/Src/dma.c: 4 warnings, 0 errors
+compiling stm32h7xx_hal_adc.c...
 compiling main.c...
 ../ICode/Eigenvalue calculation.h(61): warning:  #1295-D: Deprecated declaration print_FEATURE - give arg types
   void print_FEATURE();
@@ -62,36 +94,6 @@ compiling main.c...
 ../Core/Src/main.c(46): warning:  #177-D: variable "g_uid"  was declared but never referenced
   static uint8_t g_uid[12];
 ../Core/Src/main.c: 5 warnings, 0 errors
-compiling usart.c...
-../ICode/Eigenvalue calculation.h(61): warning:  #1295-D: Deprecated declaration print_FEATURE - give arg types
-  void print_FEATURE();
-../ICode/delay.h(12): warning:  #1-D: last line of file ends without a newline
-  #endif /* DELAY_H_ */
-../ICode/flash.h(75): warning:  #1-D: last line of file ends without a newline
-  #endif /* __FLASH_H__ */
-../ICode/app_acq.h(33): warning:  #1-D: last line of file ends without a newline
-  #endif
-../Core/Src/usart.c: 4 warnings, 0 errors
-compiling stm32h7xx_it.c...
-../ICode/Eigenvalue calculation.h(61): warning:  #1295-D: Deprecated declaration print_FEATURE - give arg types
-  void print_FEATURE();
-../ICode/delay.h(12): warning:  #1-D: last line of file ends without a newline
-  #endif /* DELAY_H_ */
-../ICode/flash.h(75): warning:  #1-D: last line of file ends without a newline
-  #endif /* __FLASH_H__ */
-../ICode/app_acq.h(33): warning:  #1-D: last line of file ends without a newline
-  #endif
-../Core/Src/stm32h7xx_it.c: 4 warnings, 0 errors
-compiling adc.c...
-../ICode/Eigenvalue calculation.h(61): warning:  #1295-D: Deprecated declaration print_FEATURE - give arg types
-  void print_FEATURE();
-../ICode/delay.h(12): warning:  #1-D: last line of file ends without a newline
-  #endif /* DELAY_H_ */
-../ICode/flash.h(75): warning:  #1-D: last line of file ends without a newline
-  #endif /* __FLASH_H__ */
-../ICode/app_acq.h(33): warning:  #1-D: last line of file ends without a newline
-  #endif
-../Core/Src/adc.c: 4 warnings, 0 errors
 compiling stm32h7xx_hal_msp.c...
 ../ICode/Eigenvalue calculation.h(61): warning:  #1295-D: Deprecated declaration print_FEATURE - give arg types
   void print_FEATURE();
@@ -102,7 +104,7 @@ compiling stm32h7xx_hal_msp.c...
 ../ICode/app_acq.h(33): warning:  #1-D: last line of file ends without a newline
   #endif
 ../Core/Src/stm32h7xx_hal_msp.c: 4 warnings, 0 errors
-compiling dma.c...
+compiling usart.c...
 ../ICode/Eigenvalue calculation.h(61): warning:  #1295-D: Deprecated declaration print_FEATURE - give arg types
   void print_FEATURE();
 ../ICode/delay.h(12): warning:  #1-D: last line of file ends without a newline
@@ -111,23 +113,23 @@ compiling dma.c...
   #endif /* __FLASH_H__ */
 ../ICode/app_acq.h(33): warning:  #1-D: last line of file ends without a newline
   #endif
-../Core/Src/dma.c: 4 warnings, 0 errors
+../Core/Src/usart.c: 4 warnings, 0 errors
 compiling stm32h7xx_hal_rcc_ex.c...
-compiling stm32h7xx_hal_adc.c...
-compiling stm32h7xx_hal_flash.c...
+compiling stm32h7xx_hal_flash_ex.c...
 compiling stm32h7xx_hal_hsem.c...
 compiling stm32h7xx_hal_gpio.c...
-compiling stm32h7xx_hal_flash_ex.c...
 compiling stm32h7xx_hal_dma_ex.c...
 compiling stm32h7xx_hal_dma.c...
 compiling stm32h7xx_hal_mdma.c...
 compiling stm32h7xx_hal_pwr.c...
-compiling stm32h7xx_hal_pwr_ex.c...
 compiling stm32h7xx_hal_cortex.c...
+compiling stm32h7xx_hal_pwr_ex.c...
 compiling stm32h7xx_hal.c...
-compiling stm32h7xx_hal_exti.c...
 compiling stm32h7xx_hal_i2c_ex.c...
+compiling stm32h7xx_hal_exti.c...
+compiling stm32h7xx_hal_i2c.c...
 compiling stm32h7xx_hal_uart_ex.c...
+compiling stm32h7xx_hal_tim_ex.c...
 compiling system_stm32h7xx.c...
 compiling delay.c...
 ../ICode/Eigenvalue calculation.h(61): warning:  #1295-D: Deprecated declaration print_FEATURE - give arg types
@@ -143,9 +145,13 @@ compiling delay.c...
 ..\ICode\delay.c(25): warning:  #1-D: last line of file ends without a newline
   }
 ..\ICode\delay.c: 6 warnings, 0 errors
-compiling stm32h7xx_hal_i2c.c...
-compiling stm32h7xx_hal_tim_ex.c...
 compiling stm32h7xx_hal_uart.c...
+compiling flash.c...
+..\ICode\flash.h(75): warning:  #1-D: last line of file ends without a newline
+  #endif /* __FLASH_H__ */
+..\ICode\flash.c(144): warning:  #1-D: last line of file ends without a newline
+  }
+..\ICode\flash.c: 2 warnings, 0 errors
 compiling Ds18b20.c...
 ../ICode/Eigenvalue calculation.h(61): warning:  #1295-D: Deprecated declaration print_FEATURE - give arg types
   void print_FEATURE();
@@ -167,12 +173,6 @@ compiling Eigenvalue calculation.c...
   void print_FEATURE();
 ..\ICode\Eigenvalue calculation.c: 4 warnings, 0 errors
 compiling stm32h7xx_hal_tim.c...
-compiling flash.c...
-..\ICode\flash.h(75): warning:  #1-D: last line of file ends without a newline
-  #endif /* __FLASH_H__ */
-..\ICode\flash.c(144): warning:  #1-D: last line of file ends without a newline
-  }
-..\ICode\flash.c: 2 warnings, 0 errors
 compiling app_acq.c...
 ..\ICode\app_acq.h(33): warning:  #1-D: last line of file ends without a newline
   #endif
@@ -196,17 +196,17 @@ compiling modbus_rtu.c...
   #endif /* __FLASH_H__ */
 ../ICode/app_acq.h(33): warning:  #1-D: last line of file ends without a newline
   #endif
-..\ICode\modbus_rtu.c(546): warning:  #1-D: last line of file ends without a newline
+..\ICode\modbus_rtu.c(580): warning:  #1-D: last line of file ends without a newline
   }
-..\ICode\modbus_rtu.c(120): warning:  #177-D: function "send_feature_pkt_test"  was declared but never referenced
+..\ICode\modbus_rtu.c(122): warning:  #177-D: function "send_feature_pkt_test"  was declared but never referenced
   static void send_feature_pkt_test(uint8_t dev_id)
-..\ICode\modbus_rtu.c(206): warning:  #177-D: function "dump_uid"  was declared but never referenced
+..\ICode\modbus_rtu.c(208): warning:  #177-D: function "dump_uid"  was declared but never referenced
   static void dump_uid(const char* tag, const uint8_t* p) {
-..\ICode\modbus_rtu.c(315): warning:  #177-D: function "Config_SendAck"  was declared but never referenced
+..\ICode\modbus_rtu.c(317): warning:  #177-D: function "Config_SendAck"  was declared but never referenced
   static void Config_SendAck(uint8_t dev_id)
 ..\ICode\modbus_rtu.c: 8 warnings, 0 errors
 linking...
-Program Size: Code=52912 RO-data=119460 RW-data=66184 ZI-data=109168  
+Program Size: Code=52828 RO-data=119460 RW-data=66704 ZI-data=109200  
 "H723_VibrationSensor\H723_VibrationSensor.axf" - 0 Error(s), 63 Warning(s).
 
 <h2>Software Packages used:</h2>
@@ -230,7 +230,7 @@ Package Vendor: Keil
 
    * Component: ARM::CMSIS:CORE@6.1.0
       Include file:  CMSIS/Core/Include/tz_context.h
-Build Time Elapsed:  00:00:03
+Build Time Elapsed:  00:00:02
 </pre>
 </body>
 </html>

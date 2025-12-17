@@ -28,11 +28,11 @@ Z:	mean RMS PP Displacement_PP Envelope_Vrms Envelope_Peak
 
 /* ────────── TEST Channel 定义 ────────── */
 #define CH_X         		 		0x01
-#define CH_Y          	 		  0x02
+#define CH_Y          	 		0x02
 #define CH_Z         		 		0x03
-#define CH_FEATURE                  0x04
-#define CH_X3         		 		0x07
-#define CH_Y3         	 		   0x08
+#define CH_FEATURE          0x04
+#define CH_X3         		  0x07
+#define CH_Y3         	 		0x08
 #define CH_Z3        		 		0x09
 #define FIXED_THIRD_BYTE    0xFF
 /* ────────── CONfIG Command 定义 ────────── */

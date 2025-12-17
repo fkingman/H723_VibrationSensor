@@ -16,6 +16,8 @@ extern uint8_t LOCAL_DEVICE_ADDR;
 
 volatile uint8_t g_tx_busy;
 
+static uint32_t s_received_bytes = 0;
+
 uint8_t uid_me[12];
 static inline void UID_Fill_BE_w0w1w2(uint8_t out[12])
 {
@@ -370,6 +372,11 @@ static void CALIBRATION_Config_SendAck(uint8_t dev_id)
 }
 
 /**********************************OTA处理函数**********************************/
+static void Flash_ClearErrors(void)
+{
+    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_ALL_ERRORS_BANK1);
+}
+
 // 1. 处理 OTA 开始命令
 // 主机发送: [DevID] [0x50] [Len(4B)] [CRC]
 static void Handle_OTA_Start(uint8_t dev_id, const uint8_t *rx_data)
@@ -379,9 +386,10 @@ static void Handle_OTA_Start(uint8_t dev_id, const uint8_t *rx_data)
     
     // 简单检查长度 (H723 下载区 384KB)
     if (total_len == 0 || total_len > (384 * 1024)) return;
-
+		s_received_bytes = 0;
     // 解锁 Flash
     HAL_FLASH_Unlock();
+		Flash_ClearErrors(); // 关键：清除之前的错误标志
     
     // 擦除下载区 (Sector 4, 5, 6)
     // 注意：擦除 384KB 可能需要几秒钟，这期间会阻塞主循环
@@ -407,51 +415,71 @@ static void Handle_OTA_Start(uint8_t dev_id, const uint8_t *rx_data)
     HAL_FLASH_Lock();
 }
 
+
+
 // 2. 处理 OTA 数据包
-// 主机发送: [DevID] [0x51] [Offset(4B)] [Data(N...)] [CRC]
-static void Handle_OTA_Data(uint8_t dev_id, const uint8_t *rx_data, uint16_t data_len)
+// 主机发送: [DevID] [CMD] [Offset(4B)] [DataLen(2B)] [Data...] [CRC]
+static void Handle_OTA_Data(uint8_t dev_id, const uint8_t *rx_data, uint16_t frame_payload_len)
 {
-    // rx_data 指向 Offset，后面是数据
-    // Modbus 帧里除去了头部和 CRC，剩下的长度 = 4(Offset) + N(Data)
-    if (data_len <= 4) return;
+    // frame_payload_len 是除去头部(Dev+Cmd)和尾部(CRC)后的总长度
     
-    uint32_t offset = rd_be32(rx_data);
-    const uint8_t *pData = rx_data + 4;
-    uint16_t payload_len = data_len - 4;
+    // 1. 基础长度检查: 至少要有 Offset(4) + DataLen(2) = 6 字节
+    if (frame_payload_len < 6) return;
+    
+    // 2. 解析参数
+    uint32_t offset = rd_be32(rx_data);          // 读取 4字节 偏移
+    uint16_t expect_len = rd_be16(rx_data + 4);  // 读取 2字节 主机指定的长度
+    const uint8_t *pData = rx_data + 6;          // 数据指针向后移 6 字节
+    
+    // 3. 计算实际剩余的数据字节数
+    uint16_t actual_len = frame_payload_len - 6;
+
+    // 4. 校验主机发送的长度 与 实际接收长度是否一致
+    // 如果不一致，说明传输过程有丢包或协议解析错误，绝对不能写入，否则会越界或错位
+    if (expect_len != actual_len)
+    {
+        return; 
+    }
+
+    // 5. 对齐检查 (32字节对齐)
+    // 注意：这里检查的是主机指定的 expect_len
+    if ((offset % 32 != 0) || (expect_len % 32 != 0))
+    {
+        return; 
+    }
 
     // 计算写入目标地址
     uint32_t target_addr = OTA_DOWNLOAD_ADDR + offset;
     
     HAL_FLASH_Unlock();
-
-    // 循环写入 (Flash Word = 32 Bytes)
-    // 注意：H7 要求 32 字节对齐。如果上位机发的包不是 32 的倍数，这里需要特殊处理
-    // 建议上位机每次发 64, 128, 256 字节
-		uint32_t flash_word_buf[8]; // 8 * 4 = 32 bytes
-    for (uint32_t i = 0; i < payload_len; i += 32)
+    Flash_ClearErrors(); // 清除标志
+        
+    // 循环写入
+    static uint32_t flash_word_buf[8]; // 32 bytes
+    
+    // 使用主机指定的 expect_len 进行循环
+    for (uint32_t i = 0; i < expect_len; i += 32)
     {
-				memset(flash_word_buf, 0xFF, 32);
-				uint32_t copy_len = (payload_len - i) >= 32 ? 32 : (payload_len - i);
-				memcpy(flash_word_buf, &pData[i], copy_len);
-        // 必须确保剩余数据够 32 字节，如果不够，需填充 0xFF (这里简化处理，假设上位机已对齐)
+        // 这里的 pData 已经是偏移过后的正确位置
+        memcpy(flash_word_buf, &pData[i], 32);
+
         if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_FLASHWORD, target_addr + i, (uint32_t)flash_word_buf) != HAL_OK)
         {
             HAL_FLASH_Lock();
-            return; // 写入失败
+            return; 
         }
     }
     
     HAL_FLASH_Lock();
+    s_received_bytes += expect_len; // 累加接收字节数
 
-    // 回复 ACK: [DevID] [0x51] [Offset(4B)] [CRC]
-    static uint8_t tx[8]; 
-    tx[0] = dev_id; tx[1] = CMD_OTA_DATA;
-    wr_be32(&tx[2], offset); // 原样返回偏移量确认
+    // 回复 ACK   
+		static uint8_t tx[7];uint8_t *p = tx;
+		*p++ = dev_id; *p++ = CMD_OTA_DATA; *p++ = 0x02; *p++ = 0x4F; *p++ = 0x4B; // 4F4B OK
+		uint16_t crc = Modbus_CRC16(tx, (uint16_t)(p - tx));
+		*p++ = (uint8_t)crc; *p++ = (uint8_t)(crc >> 8);		
+    uart3_send_dma(tx, (uint16_t)(p - tx));    
 		
-    uint16_t crc = Modbus_CRC16(tx, 6);
-    tx[6] = (uint8_t)crc; tx[7] = (uint8_t)(crc >> 8);
-    
-		uart3_send_dma(tx, 8);		
 }
 
 // 3. 处理 OTA 结束命令
@@ -459,7 +487,13 @@ static void Handle_OTA_Data(uint8_t dev_id, const uint8_t *rx_data, uint16_t dat
 static void Handle_OTA_End(uint8_t dev_id, const uint8_t *rx_data)
 {
     uint32_t fw_len = rd_be32(rx_data);
-
+		
+		if (fw_len == 0 || s_received_bytes != fw_len)
+    {
+        // 可以在这里回复一个 NACK (错误码)，告诉上位机校验失败
+        // 或者直接忽略，不重启，不设置标志
+        return; 
+    }
     // 1. 回复 ACK (必须先回复，因为一会要重启了)
 		static uint8_t tx[7];uint8_t *p = tx;
 		*p++ = dev_id; *p++ = CMD_OTA_START; *p++ = 0x02; *p++ = 0x4F; *p++ = 0x4B; // 4F4B OK

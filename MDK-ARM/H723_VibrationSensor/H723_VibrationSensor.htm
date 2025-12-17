@@ -3,9 +3,9 @@
 <title>Static Call Graph - [H723_VibrationSensor\H723_VibrationSensor.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image H723_VibrationSensor\H723_VibrationSensor.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Mon Dec 15 14:17:36 2025
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Tue Dec 16 16:20:47 2025
 <BR><P>
-<H3>Maximum Stack Usage =        504 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
+<H3>Maximum Stack Usage =        432 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
 main &rArr; Process_Data &rArr; Calc_FreqDomain_Z &rArr; arm_cfft_f32 &rArr; arm_cfft_radix8by4_f32 &rArr; arm_radix8_butterfly_f32
 <P>
@@ -623,15 +623,13 @@ Global Symbols
 
 <P><STRONG><a name="[f8]"></a>__aeabi_memcpy4</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, memcpya.o(.text))
 <BR><BR>[Called By]<UL><LI><a href="#[17a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Protocol_HandleRxFrame
-<LI><a href="#[93]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 <LI><a href="#[f7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Flash_ReadWholeConfig
 </UL>
 
 <P><STRONG><a name="[1a1]"></a>__aeabi_memcpy8</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, memcpya.o(.text), UNUSED)
 
 <P><STRONG><a name="[a6]"></a>__aeabi_memset</STRONG> (Thumb, 14 bytes, Stack size 0 bytes, memseta.o(.text))
-<BR><BR>[Called By]<UL><LI><a href="#[163]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Handle_OTA_Data
-<LI><a href="#[f7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Flash_ReadWholeConfig
+<BR><BR>[Called By]<UL><LI><a href="#[f7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Flash_ReadWholeConfig
 <LI><a href="#[a7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_memset$wrapper
 <LI><a href="#[a5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr
 </UL>
@@ -640,10 +638,8 @@ Global Symbols
 
 <P><STRONG><a name="[1a3]"></a>__aeabi_memset8</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, memseta.o(.text), UNUSED)
 
-<P><STRONG><a name="[a5]"></a>__aeabi_memclr</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, memseta.o(.text))
+<P><STRONG><a name="[a5]"></a>__aeabi_memclr</STRONG> (Thumb, 4 bytes, Stack size 0 bytes, memseta.o(.text), UNUSED)
 <BR><BR>[Calls]<UL><LI><a href="#[a6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memset
-</UL>
-<BR>[Called By]<UL><LI><a href="#[17c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;send_feature_pkt
 </UL>
 
 <P><STRONG><a name="[f3]"></a>__aeabi_memclr4</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, memseta.o(.text))
@@ -654,6 +650,7 @@ Global Symbols
 <LI><a href="#[16d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_ADC1_Init
 <LI><a href="#[186]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SystemClock_Config
 <LI><a href="#[178]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PeriphCommonClock_Config
+<LI><a href="#[17c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;send_feature_pkt
 <LI><a href="#[f0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Flash_ProgramWholeConfig
 <LI><a href="#[de]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Tempetature_GPIO_Init
 <LI><a href="#[e4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Mode_Output
@@ -1415,8 +1412,8 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[c6]"></a>HAL_GetTick</STRONG> (Thumb, 6 bytes, Stack size 0 bytes, stm32h7xx_hal.o(i.HAL_GetTick))
-<BR><BR>[Called By]<UL><LI><a href="#[113]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_DMA_Init
-<LI><a href="#[15d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_UART_Transmit
+<BR><BR>[Called By]<UL><LI><a href="#[15d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_UART_Transmit
+<LI><a href="#[113]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_DMA_Init
 <LI><a href="#[135]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RCC_OscConfig
 <LI><a href="#[133]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RCC_ClockConfig
 <LI><a href="#[130]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RCCEx_PeriphCLKConfig
@@ -1851,7 +1848,6 @@ Global Symbols
 <LI><a href="#[15e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART_WaitOnFlagUntilTimeout
 </UL>
 <BR>[Called By]<UL><LI><a href="#[9f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;fputc
-<LI><a href="#[93]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 <LI><a href="#[166]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Handle_OTA_End
 </UL>
 
@@ -2209,8 +2205,7 @@ Global Symbols
 <P><STRONG><a name="[198]"></a>__2printf</STRONG> (Thumb, 0 bytes, Stack size 24 bytes, printfa.o(i.__0printf))
 <BR><BR>[Stack]<UL><LI>Max Depth = 24<LI>Call Chain = __2printf
 </UL>
-<BR>[Called By]<UL><LI><a href="#[93]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
-<LI><a href="#[180]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_g_data
+<BR>[Called By]<UL><LI><a href="#[180]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_g_data
 <LI><a href="#[181]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_FEATURE
 </UL>
 
@@ -2286,8 +2281,8 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> printfa.o(i.__0printf)
 </UL>
-<P><STRONG><a name="[93]"></a>main</STRONG> (Thumb, 354 bytes, Stack size 72 bytes, main.o(i.main))
-<BR><BR>[Stack]<UL><LI>Max Depth = 504<LI>Call Chain = main &rArr; Process_Data &rArr; Calc_FreqDomain_Z &rArr; arm_cfft_f32 &rArr; arm_cfft_radix8by4_f32 &rArr; arm_radix8_butterfly_f32
+<P><STRONG><a name="[93]"></a>main</STRONG> (Thumb, 292 bytes, Stack size 0 bytes, main.o(i.main))
+<BR><BR>[Stack]<UL><LI>Max Depth = 432<LI>Call Chain = main &rArr; Process_Data &rArr; Calc_FreqDomain_Z &rArr; arm_cfft_f32 &rArr; arm_cfft_radix8by4_f32 &rArr; arm_radix8_butterfly_f32
 </UL>
 <BR>[Calls]<UL><LI><a href="#[17a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Protocol_HandleRxFrame
 <LI><a href="#[179]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Process_Data
@@ -2298,7 +2293,6 @@ Global Symbols
 <LI><a href="#[16f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_DMA_Init
 <LI><a href="#[16e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_ADC2_Init
 <LI><a href="#[16d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_ADC1_Init
-<LI><a href="#[15d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_UART_Transmit
 <LI><a href="#[122]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Init
 <LI><a href="#[c6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
 <LI><a href="#[ea]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Ds18b20_Start
@@ -2312,8 +2306,6 @@ Global Symbols
 <LI><a href="#[178]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PeriphCommonClock_Config
 <LI><a href="#[cb]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;App_ConfigInit
 <LI><a href="#[169]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MPU_Config
-<LI><a href="#[198]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__2printf
-<LI><a href="#[f8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy4
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> entry9a.o(.ARM.Collect$$$$0000000B)
 </UL>
@@ -2654,6 +2646,11 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[17a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Protocol_HandleRxFrame
 </UL>
 
+<P><STRONG><a name="[165]"></a>Flash_ClearErrors</STRONG> (Thumb, 8 bytes, Stack size 0 bytes, modbus_rtu.o(i.Flash_ClearErrors))
+<BR><BR>[Called By]<UL><LI><a href="#[168]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Handle_OTA_Start
+<LI><a href="#[163]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Handle_OTA_Data
+</UL>
+
 <P><STRONG><a name="[160]"></a>HandleSetAddr_Broadcast</STRONG> (Thumb, 248 bytes, Stack size 32 bytes, modbus_rtu.o(i.HandleSetAddr_Broadcast))
 <BR><BR>[Stack]<UL><LI>Max Depth = 208<LI>Call Chain = HandleSetAddr_Broadcast &rArr; Flash_WriteDeviceAddr &rArr; Flash_WriteConfig &rArr; Flash_ProgramWholeConfig &rArr; HAL_FLASH_Program &rArr; FLASH_WaitForLastOperation
 </UL>
@@ -2666,23 +2663,23 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[17a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Protocol_HandleRxFrame
 </UL>
 
-<P><STRONG><a name="[163]"></a>Handle_OTA_Data</STRONG> (Thumb, 174 bytes, Stack size 80 bytes, modbus_rtu.o(i.Handle_OTA_Data))
-<BR><BR>[Stack]<UL><LI>Max Depth = 156<LI>Call Chain = Handle_OTA_Data &rArr; uart3_send_dma &rArr; HAL_UART_Transmit_DMA &rArr; HAL_DMA_Start_IT &rArr; DMA_SetConfig
+<P><STRONG><a name="[163]"></a>Handle_OTA_Data</STRONG> (Thumb, 222 bytes, Stack size 56 bytes, modbus_rtu.o(i.Handle_OTA_Data))
+<BR><BR>[Stack]<UL><LI>Max Depth = 132<LI>Call Chain = Handle_OTA_Data &rArr; uart3_send_dma &rArr; HAL_UART_Transmit_DMA &rArr; HAL_DMA_Start_IT &rArr; DMA_SetConfig
 </UL>
 <BR>[Calls]<UL><LI><a href="#[ce]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Modbus_CRC16
-<LI><a href="#[165]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;wr_be32
 <LI><a href="#[cf]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart3_send_dma
 <LI><a href="#[164]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rd_be32
+<LI><a href="#[d8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rd_be16
+<LI><a href="#[165]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Flash_ClearErrors
 <LI><a href="#[f2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_FLASH_Unlock
 <LI><a href="#[f6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_FLASH_Program
 <LI><a href="#[f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_FLASH_Lock
-<LI><a href="#[a6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memset
 <LI><a href="#[107]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memcpy
 </UL>
 <BR>[Called By]<UL><LI><a href="#[17a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Protocol_HandleRxFrame
 </UL>
 
-<P><STRONG><a name="[166]"></a>Handle_OTA_End</STRONG> (Thumb, 106 bytes, Stack size 24 bytes, modbus_rtu.o(i.Handle_OTA_End))
+<P><STRONG><a name="[166]"></a>Handle_OTA_End</STRONG> (Thumb, 120 bytes, Stack size 24 bytes, modbus_rtu.o(i.Handle_OTA_End))
 <BR><BR>[Stack]<UL><LI>Max Depth = 176<LI>Call Chain = Handle_OTA_End &rArr; Flash_SetOTAInfo &rArr; Flash_ProgramWholeConfig &rArr; HAL_FLASH_Program &rArr; FLASH_WaitForLastOperation
 </UL>
 <BR>[Calls]<UL><LI><a href="#[15d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_UART_Transmit
@@ -2695,12 +2692,13 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[17a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Protocol_HandleRxFrame
 </UL>
 
-<P><STRONG><a name="[168]"></a>Handle_OTA_Start</STRONG> (Thumb, 144 bytes, Stack size 48 bytes, modbus_rtu.o(i.Handle_OTA_Start))
+<P><STRONG><a name="[168]"></a>Handle_OTA_Start</STRONG> (Thumb, 154 bytes, Stack size 48 bytes, modbus_rtu.o(i.Handle_OTA_Start))
 <BR><BR>[Stack]<UL><LI>Max Depth = 124<LI>Call Chain = Handle_OTA_Start &rArr; uart3_send_dma &rArr; HAL_UART_Transmit_DMA &rArr; HAL_DMA_Start_IT &rArr; DMA_SetConfig
 </UL>
 <BR>[Calls]<UL><LI><a href="#[ce]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Modbus_CRC16
 <LI><a href="#[cf]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart3_send_dma
 <LI><a href="#[164]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;rd_be32
+<LI><a href="#[165]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Flash_ClearErrors
 <LI><a href="#[f4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_FLASHEx_Erase
 <LI><a href="#[f2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_FLASH_Unlock
 <LI><a href="#[f5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_FLASH_Lock
@@ -2719,17 +2717,16 @@ Local Symbols
 <LI><a href="#[160]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HandleSetAddr_Broadcast
 </UL>
 
-<P><STRONG><a name="[199]"></a>put_be_f32</STRONG> (Thumb, 30 bytes, Stack size 32 bytes, modbus_rtu.o(i.put_be_f32))
-<BR><BR>[Stack]<UL><LI>Max Depth = 32<LI>Call Chain = put_be_f32
-</UL>
-<BR>[Calls]<UL><LI><a href="#[165]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;wr_be32
+<P><STRONG><a name="[199]"></a>put_be_f32</STRONG> (Thumb, 40 bytes, Stack size 24 bytes, modbus_rtu.o(i.put_be_f32))
+<BR><BR>[Stack]<UL><LI>Max Depth = 24<LI>Call Chain = put_be_f32
 </UL>
 <BR>[Called By]<UL><LI><a href="#[17e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;send_wave_pkt
 <LI><a href="#[17c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;send_feature_pkt
 </UL>
 
 <P><STRONG><a name="[d8]"></a>rd_be16</STRONG> (Thumb, 12 bytes, Stack size 0 bytes, modbus_rtu.o(i.rd_be16))
-<BR><BR>[Called By]<UL><LI><a href="#[da]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Config_ParseAndApply_Point
+<BR><BR>[Called By]<UL><LI><a href="#[163]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Handle_OTA_Data
+<LI><a href="#[da]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Config_ParseAndApply_Point
 <LI><a href="#[d7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Config_ParseAndApply_Freq
 </UL>
 
@@ -2756,7 +2753,7 @@ Local Symbols
 <BR>[Calls]<UL><LI><a href="#[ce]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Modbus_CRC16
 <LI><a href="#[cf]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;uart3_send_dma
 <LI><a href="#[199]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;put_be_f32
-<LI><a href="#[a5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr
+<LI><a href="#[f3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_memclr4
 </UL>
 <BR>[Called By]<UL><LI><a href="#[17a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Protocol_HandleRxFrame
 </UL>
@@ -2794,11 +2791,6 @@ Local Symbols
 <LI><a href="#[160]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HandleSetAddr_Broadcast
 <LI><a href="#[d6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Cfg_SendAck
 <LI><a href="#[cd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;CALIBRATION_Config_SendAck
-</UL>
-
-<P><STRONG><a name="[165]"></a>wr_be32</STRONG> (Thumb, 16 bytes, Stack size 0 bytes, modbus_rtu.o(i.wr_be32))
-<BR><BR>[Called By]<UL><LI><a href="#[199]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;put_be_f32
-<LI><a href="#[163]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Handle_OTA_Data
 </UL>
 
 <P><STRONG><a name="[192]"></a>_fp_digits</STRONG> (Thumb, 366 bytes, Stack size 64 bytes, printfa.o(i._fp_digits), UNUSED)

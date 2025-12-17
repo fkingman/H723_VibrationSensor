@@ -2,8 +2,8 @@ Dependencies for Project 'H723_VibrationSensor', Target 'H723_VibrationSensor': 
 CompilerVersion: 5060960::V5.06 update 7 (build 960)::.\ARM_Compiler_5.06u7
 F (startup_stm32h723xx.s)(0x693A7559)(--cpu Cortex-M7.fp.dp -g --apcs=interwork --pd "__MICROLIB SETA 1"-I.\RTE\_H723_VibrationSensor-ID:\Keil5\ARM\PACK\ARM\CMSIS\6.1.0\CMSIS\Core\Include--pd "__UVISION_VERSION SETA 541" --pd "STM32H723xx SETA 1" --pd "_RTE_ SETA 1"--list startup_stm32h723xx.lst --xref -o h723_vibrationsensor\startup_stm32h723xx.o --depend h723_vibrationsensor\startup_stm32h723xx.d)
 F (..\Drivers\CMSIS\DSP\Lib\ARM\arm_cortexM7lfsp_math.lib)(0x67CFE58D)()
-F (../Core/Src/main.c)(0x693FA47B)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../Drivers/CMSIS/DSP/Include -I ../ICode -I ../Drivers/CMSIS/DSP/Lib/GCC-I.\RTE\_H723_VibrationSensor-ID:\Keil5\ARM\PACK\ARM\CMSIS\6.1.0\CMSIS\Core\Include-D__UVISION_VERSION="541" -DSTM32H723xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H723xx -DARM_MATH_CM7F-o h723_vibrationsensor\main.o --depend h723_vibrationsensor\main.d)
-I (../Core/Inc/main.h)(0x693AA9E3)
+F (../Core/Src/main.c)(0x6941146B)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../Drivers/CMSIS/DSP/Include -I ../ICode -I ../Drivers/CMSIS/DSP/Lib/GCC-I.\RTE\_H723_VibrationSensor-ID:\Keil5\ARM\PACK\ARM\CMSIS\6.1.0\CMSIS\Core\Include-D__UVISION_VERSION="541" -DSTM32H723xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H723xx -DARM_MATH_CM7F-o h723_vibrationsensor\main.o --depend h723_vibrationsensor\main.d)
+I (../Core/Inc/main.h)(0x6941146B)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h)(0x67CFE62F)
 I (../Core/Inc/stm32h7xx_hal_conf.h)(0x684A5BE6)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc.h)(0x67CFE62F)
@@ -45,7 +45,7 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x67CFE62F)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\string.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdio.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdlib.h)(0x5E8E3CC2)
-I (../ICode/modbus_rtu.h)(0x693F7417)
+I (../ICode/modbus_rtu.h)(0x69410EB4)
 I (../Core/Inc/usart.h)(0x68637F56)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdbool.h)(0x5E8E3CC2)
 I (../ICode/Eigenvalue calculation.h)(0x693AA9E3)
@@ -61,7 +61,7 @@ I (../Core/Inc/tim.h)(0x68CBC292)
 I (../Core/Inc/gpio.h)(0x684134C3)
 F (../Core/Src/gpio.c)(0x68A2D4AB)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../Drivers/CMSIS/DSP/Include -I ../ICode -I ../Drivers/CMSIS/DSP/Lib/GCC-I.\RTE\_H723_VibrationSensor-ID:\Keil5\ARM\PACK\ARM\CMSIS\6.1.0\CMSIS\Core\Include-D__UVISION_VERSION="541" -DSTM32H723xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H723xx -DARM_MATH_CM7F-o h723_vibrationsensor\gpio.o --depend h723_vibrationsensor\gpio.d)
 I (../Core/Inc/gpio.h)(0x684134C3)
-I (../Core/Inc/main.h)(0x693AA9E3)
+I (../Core/Inc/main.h)(0x6941146B)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h)(0x67CFE62F)
 I (../Core/Inc/stm32h7xx_hal_conf.h)(0x684A5BE6)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc.h)(0x67CFE62F)
@@ -103,7 +103,7 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x67CFE62F)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\string.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdio.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdlib.h)(0x5E8E3CC2)
-I (../ICode/modbus_rtu.h)(0x693F7417)
+I (../ICode/modbus_rtu.h)(0x69410EB4)
 I (../Core/Inc/usart.h)(0x68637F56)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdbool.h)(0x5E8E3CC2)
 I (../ICode/Eigenvalue calculation.h)(0x693AA9E3)
@@ -115,7 +115,7 @@ I (../ICode/flash.h)(0x693BC0C8)
 I (../ICode/app_acq.h)(0x693FA7FD)
 F (../Core/Src/adc.c)(0x68CCB7D1)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../Drivers/CMSIS/DSP/Include -I ../ICode -I ../Drivers/CMSIS/DSP/Lib/GCC-I.\RTE\_H723_VibrationSensor-ID:\Keil5\ARM\PACK\ARM\CMSIS\6.1.0\CMSIS\Core\Include-D__UVISION_VERSION="541" -DSTM32H723xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H723xx -DARM_MATH_CM7F-o h723_vibrationsensor\adc.o --depend h723_vibrationsensor\adc.d)
 I (../Core/Inc/adc.h)(0x684A5BE5)
-I (../Core/Inc/main.h)(0x693AA9E3)
+I (../Core/Inc/main.h)(0x6941146B)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h)(0x67CFE62F)
 I (../Core/Inc/stm32h7xx_hal_conf.h)(0x684A5BE6)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc.h)(0x67CFE62F)
@@ -157,7 +157,7 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x67CFE62F)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\string.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdio.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdlib.h)(0x5E8E3CC2)
-I (../ICode/modbus_rtu.h)(0x693F7417)
+I (../ICode/modbus_rtu.h)(0x69410EB4)
 I (../Core/Inc/usart.h)(0x68637F56)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdbool.h)(0x5E8E3CC2)
 I (../ICode/Eigenvalue calculation.h)(0x693AA9E3)
@@ -169,7 +169,7 @@ I (../ICode/flash.h)(0x693BC0C8)
 I (../ICode/app_acq.h)(0x693FA7FD)
 F (../Core/Src/dma.c)(0x68C916E3)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../Drivers/CMSIS/DSP/Include -I ../ICode -I ../Drivers/CMSIS/DSP/Lib/GCC-I.\RTE\_H723_VibrationSensor-ID:\Keil5\ARM\PACK\ARM\CMSIS\6.1.0\CMSIS\Core\Include-D__UVISION_VERSION="541" -DSTM32H723xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H723xx -DARM_MATH_CM7F-o h723_vibrationsensor\dma.o --depend h723_vibrationsensor\dma.d)
 I (../Core/Inc/dma.h)(0x6864D133)
-I (../Core/Inc/main.h)(0x693AA9E3)
+I (../Core/Inc/main.h)(0x6941146B)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h)(0x67CFE62F)
 I (../Core/Inc/stm32h7xx_hal_conf.h)(0x684A5BE6)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc.h)(0x67CFE62F)
@@ -211,7 +211,7 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x67CFE62F)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\string.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdio.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdlib.h)(0x5E8E3CC2)
-I (../ICode/modbus_rtu.h)(0x693F7417)
+I (../ICode/modbus_rtu.h)(0x69410EB4)
 I (../Core/Inc/usart.h)(0x68637F56)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdbool.h)(0x5E8E3CC2)
 I (../ICode/Eigenvalue calculation.h)(0x693AA9E3)
@@ -223,7 +223,7 @@ I (../ICode/flash.h)(0x693BC0C8)
 I (../ICode/app_acq.h)(0x693FA7FD)
 F (../Core/Src/tim.c)(0x693A7556)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../Drivers/CMSIS/DSP/Include -I ../ICode -I ../Drivers/CMSIS/DSP/Lib/GCC-I.\RTE\_H723_VibrationSensor-ID:\Keil5\ARM\PACK\ARM\CMSIS\6.1.0\CMSIS\Core\Include-D__UVISION_VERSION="541" -DSTM32H723xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H723xx -DARM_MATH_CM7F-o h723_vibrationsensor\tim.o --depend h723_vibrationsensor\tim.d)
 I (../Core/Inc/tim.h)(0x68CBC292)
-I (../Core/Inc/main.h)(0x693AA9E3)
+I (../Core/Inc/main.h)(0x6941146B)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h)(0x67CFE62F)
 I (../Core/Inc/stm32h7xx_hal_conf.h)(0x684A5BE6)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc.h)(0x67CFE62F)
@@ -265,7 +265,7 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x67CFE62F)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\string.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdio.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdlib.h)(0x5E8E3CC2)
-I (../ICode/modbus_rtu.h)(0x693F7417)
+I (../ICode/modbus_rtu.h)(0x69410EB4)
 I (../Core/Inc/usart.h)(0x68637F56)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdbool.h)(0x5E8E3CC2)
 I (../ICode/Eigenvalue calculation.h)(0x693AA9E3)
@@ -277,7 +277,7 @@ I (../ICode/flash.h)(0x693BC0C8)
 I (../ICode/app_acq.h)(0x693FA7FD)
 F (../Core/Src/usart.c)(0x6937BC4C)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../Drivers/CMSIS/DSP/Include -I ../ICode -I ../Drivers/CMSIS/DSP/Lib/GCC-I.\RTE\_H723_VibrationSensor-ID:\Keil5\ARM\PACK\ARM\CMSIS\6.1.0\CMSIS\Core\Include-D__UVISION_VERSION="541" -DSTM32H723xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H723xx -DARM_MATH_CM7F-o h723_vibrationsensor\usart.o --depend h723_vibrationsensor\usart.d)
 I (../Core/Inc/usart.h)(0x68637F56)
-I (../Core/Inc/main.h)(0x693AA9E3)
+I (../Core/Inc/main.h)(0x6941146B)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h)(0x67CFE62F)
 I (../Core/Inc/stm32h7xx_hal_conf.h)(0x684A5BE6)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc.h)(0x67CFE62F)
@@ -319,7 +319,7 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x67CFE62F)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\string.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdio.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdlib.h)(0x5E8E3CC2)
-I (../ICode/modbus_rtu.h)(0x693F7417)
+I (../ICode/modbus_rtu.h)(0x69410EB4)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdbool.h)(0x5E8E3CC2)
 I (../ICode/Eigenvalue calculation.h)(0x693AA9E3)
 I (../Drivers/CMSIS/DSP/Include/arm_math.h)(0x67CFE58D)
@@ -329,7 +329,7 @@ I (../ICode/delay.h)(0x693F7695)
 I (../ICode/flash.h)(0x693BC0C8)
 I (../ICode/app_acq.h)(0x693FA7FD)
 F (../Core/Src/stm32h7xx_it.c)(0x693A820B)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../Drivers/CMSIS/DSP/Include -I ../ICode -I ../Drivers/CMSIS/DSP/Lib/GCC-I.\RTE\_H723_VibrationSensor-ID:\Keil5\ARM\PACK\ARM\CMSIS\6.1.0\CMSIS\Core\Include-D__UVISION_VERSION="541" -DSTM32H723xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H723xx -DARM_MATH_CM7F-o h723_vibrationsensor\stm32h7xx_it.o --depend h723_vibrationsensor\stm32h7xx_it.d)
-I (../Core/Inc/main.h)(0x693AA9E3)
+I (../Core/Inc/main.h)(0x6941146B)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h)(0x67CFE62F)
 I (../Core/Inc/stm32h7xx_hal_conf.h)(0x684A5BE6)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc.h)(0x67CFE62F)
@@ -371,7 +371,7 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x67CFE62F)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\string.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdio.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdlib.h)(0x5E8E3CC2)
-I (../ICode/modbus_rtu.h)(0x693F7417)
+I (../ICode/modbus_rtu.h)(0x69410EB4)
 I (../Core/Inc/usart.h)(0x68637F56)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdbool.h)(0x5E8E3CC2)
 I (../ICode/Eigenvalue calculation.h)(0x693AA9E3)
@@ -383,7 +383,7 @@ I (../ICode/flash.h)(0x693BC0C8)
 I (../ICode/app_acq.h)(0x693FA7FD)
 I (../Core/Inc/stm32h7xx_it.h)(0x68CBC292)
 F (../Core/Src/stm32h7xx_hal_msp.c)(0x684134C5)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../Drivers/CMSIS/DSP/Include -I ../ICode -I ../Drivers/CMSIS/DSP/Lib/GCC-I.\RTE\_H723_VibrationSensor-ID:\Keil5\ARM\PACK\ARM\CMSIS\6.1.0\CMSIS\Core\Include-D__UVISION_VERSION="541" -DSTM32H723xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H723xx -DARM_MATH_CM7F-o h723_vibrationsensor\stm32h7xx_hal_msp.o --depend h723_vibrationsensor\stm32h7xx_hal_msp.d)
-I (../Core/Inc/main.h)(0x693AA9E3)
+I (../Core/Inc/main.h)(0x6941146B)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h)(0x67CFE62F)
 I (../Core/Inc/stm32h7xx_hal_conf.h)(0x684A5BE6)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc.h)(0x67CFE62F)
@@ -425,7 +425,7 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x67CFE62F)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\string.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdio.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdlib.h)(0x5E8E3CC2)
-I (../ICode/modbus_rtu.h)(0x693F7417)
+I (../ICode/modbus_rtu.h)(0x69410EB4)
 I (../Core/Inc/usart.h)(0x68637F56)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdbool.h)(0x5E8E3CC2)
 I (../ICode/Eigenvalue calculation.h)(0x693AA9E3)
@@ -1334,7 +1334,7 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart.h)(0x67CFE62F)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x67CFE62F)
 F (..\ICode\delay.c)(0x693F7695)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../Drivers/CMSIS/DSP/Include -I ../ICode -I ../Drivers/CMSIS/DSP/Lib/GCC-I.\RTE\_H723_VibrationSensor-ID:\Keil5\ARM\PACK\ARM\CMSIS\6.1.0\CMSIS\Core\Include-D__UVISION_VERSION="541" -DSTM32H723xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H723xx -DARM_MATH_CM7F-o h723_vibrationsensor\delay.o --depend h723_vibrationsensor\delay.d)
 I (..\ICode\delay.h)(0x693F7695)
-I (../Core/Inc/main.h)(0x693AA9E3)
+I (../Core/Inc/main.h)(0x6941146B)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h)(0x67CFE62F)
 I (../Core/Inc/stm32h7xx_hal_conf.h)(0x684A5BE6)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc.h)(0x67CFE62F)
@@ -1376,7 +1376,7 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x67CFE62F)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\string.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdio.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdlib.h)(0x5E8E3CC2)
-I (../ICode/modbus_rtu.h)(0x693F7417)
+I (../ICode/modbus_rtu.h)(0x69410EB4)
 I (../Core/Inc/usart.h)(0x68637F56)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdbool.h)(0x5E8E3CC2)
 I (../ICode/Eigenvalue calculation.h)(0x693AA9E3)
@@ -1427,11 +1427,11 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_tim_ex.h)(0x67CFE62F)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart.h)(0x67CFE62F)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x67CFE62F)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdbool.h)(0x5E8E3CC2)
-I (../Core/Inc/main.h)(0x693AA9E3)
+I (../Core/Inc/main.h)(0x6941146B)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\string.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdio.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdlib.h)(0x5E8E3CC2)
-I (../ICode/modbus_rtu.h)(0x693F7417)
+I (../ICode/modbus_rtu.h)(0x69410EB4)
 I (../Core/Inc/usart.h)(0x68637F56)
 I (../ICode/Eigenvalue calculation.h)(0x693AA9E3)
 I (../Drivers/CMSIS/DSP/Include/arm_math.h)(0x67CFE58D)
@@ -1480,11 +1480,11 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_tim.h)(0x67CFE62F)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_tim_ex.h)(0x67CFE62F)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart.h)(0x67CFE62F)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x67CFE62F)
-I (../Core/Inc/main.h)(0x693AA9E3)
+I (../Core/Inc/main.h)(0x6941146B)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\string.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdio.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdlib.h)(0x5E8E3CC2)
-I (../ICode/modbus_rtu.h)(0x693F7417)
+I (../ICode/modbus_rtu.h)(0x69410EB4)
 I (../Core/Inc/usart.h)(0x68637F56)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdbool.h)(0x5E8E3CC2)
 I (../ICode/Eigenvalue calculation.h)(0x693AA9E3)
@@ -1580,11 +1580,11 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_tim_ex.h)(0x67CFE62F)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart.h)(0x67CFE62F)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x67CFE62F)
 I (../Core/Inc/tim.h)(0x68CBC292)
-I (../Core/Inc/main.h)(0x693AA9E3)
+I (../Core/Inc/main.h)(0x6941146B)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\string.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdio.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdlib.h)(0x5E8E3CC2)
-I (../ICode/modbus_rtu.h)(0x693F7417)
+I (../ICode/modbus_rtu.h)(0x69410EB4)
 I (../Core/Inc/usart.h)(0x68637F56)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdbool.h)(0x5E8E3CC2)
 I (../ICode/Eigenvalue calculation.h)(0x693AA9E3)
@@ -1594,9 +1594,9 @@ I (../ICode/DS18B20.h)(0x693A9851)
 I (../ICode/delay.h)(0x693F7695)
 I (../ICode/flash.h)(0x693BC0C8)
 I (../ICode/app_acq.h)(0x693FA7FD)
-F (..\ICode\modbus_rtu.c)(0x693E4588)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../Drivers/CMSIS/DSP/Include -I ../ICode -I ../Drivers/CMSIS/DSP/Lib/GCC-I.\RTE\_H723_VibrationSensor-ID:\Keil5\ARM\PACK\ARM\CMSIS\6.1.0\CMSIS\Core\Include-D__UVISION_VERSION="541" -DSTM32H723xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H723xx -DARM_MATH_CM7F-o h723_vibrationsensor\modbus_rtu.o --depend h723_vibrationsensor\modbus_rtu.d)
-I (..\ICode\modbus_rtu.h)(0x693F7417)
-I (../Core/Inc/main.h)(0x693AA9E3)
+F (..\ICode\modbus_rtu.c)(0x6941165C)(--c99 --gnu -c --cpu Cortex-M7.fp.dp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Drivers/CMSIS/Include -I ../Drivers/CMSIS/DSP/Include -I ../ICode -I ../Drivers/CMSIS/DSP/Lib/GCC-I.\RTE\_H723_VibrationSensor-ID:\Keil5\ARM\PACK\ARM\CMSIS\6.1.0\CMSIS\Core\Include-D__UVISION_VERSION="541" -DSTM32H723xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H723xx -DARM_MATH_CM7F-o h723_vibrationsensor\modbus_rtu.o --depend h723_vibrationsensor\modbus_rtu.d)
+I (..\ICode\modbus_rtu.h)(0x69410EB4)
+I (../Core/Inc/main.h)(0x6941146B)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h)(0x67CFE62F)
 I (../Core/Inc/stm32h7xx_hal_conf.h)(0x684A5BE6)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc.h)(0x67CFE62F)
@@ -1638,7 +1638,7 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x67CFE62F)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\string.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdio.h)(0x5E8E3CC2)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\stdlib.h)(0x5E8E3CC2)
-I (../ICode/modbus_rtu.h)(0x693F7417)
+I (../ICode/modbus_rtu.h)(0x69410EB4)
 I (../ICode/Eigenvalue calculation.h)(0x693AA9E3)
 I (../Drivers/CMSIS/DSP/Include/arm_math.h)(0x67CFE58D)
 I (D:\Keil5\ARM\ARM_Compiler_5.06u7\include\float.h)(0x5E8E3CC2)
