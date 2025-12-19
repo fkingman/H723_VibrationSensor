@@ -290,7 +290,7 @@ static bool HandleSetAddr_Broadcast(const uint8_t* rx, uint16_t flen)
 /**********************************解析配置帧**********************************/
 static void Config_ParseAndApply_Freq(const uint8_t* rx)
 {
-		uint16_t f = rd_be16(&rx[3]);        // dev|cmd|sub 之后 4 字节
+		uint16_t f = rd_be16(&rx[2]);        // dev|cmd 之后 2 字节
 		if (f == 0) return;             // 0 无效，直接忽略
 		if (f > FLASH_CFG_DEFAULT_FREQ) return;
 		if (f == g_cfg_freq_hz) return;
@@ -548,14 +548,7 @@ void Protocol_HandleRxFrame(const uint8_t *rx, uint16_t len, uint8_t local_addre
     case CMD_FEATURE: send_feature_pkt(dev_id, &X_data, &Y_data, &Z_data, Temp); break;
 		case CMD_WAVE:memcpy(Tx_Wave_Buffer_Z, g_data_z, sizeof(Tx_Wave_Buffer_Z));send_wave_ack(dev_id); break;
 		case CMD_WAVE_PACK:	send_wave_pkt(dev_id, Tx_Wave_Buffer_Z, b2, b3); break;
-		case CMD_CONFIG:
-			  switch (b2)
-        {
-        case FREQ: Config_ParseAndApply_Freq(rx);Cfg_SendAck(dev_id); break;
-        case PORINT: Config_ParseAndApply_Point(rx);Cfg_SendAck(dev_id); break;			
-        default: break;
-        }
-        break;
+		case CMD_CONFIG:Config_ParseAndApply_Freq(rx);Cfg_SendAck(dev_id);break;
     case CMD_CALIBRATION:Z_Calib_Z_Upright_Neg1G(g_data_z, 100);CALIBRATION_Config_SendAck(dev_id); break;
     case CMD_TEST: 
         switch (b2)
