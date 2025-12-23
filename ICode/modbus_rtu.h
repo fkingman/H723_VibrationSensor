@@ -15,8 +15,8 @@ Z:	mean RMS PP Displacement_PP Envelope_Vrms Envelope_Peak
 /* ────────── Command 定义 ────────── */
 #define CMD_CONFIG       0x87     /* 频率请求  */
 #define CMD_FEATURE      0x02     /* 特征值请求  */
-#define CMD_WAVE_PACK    0x03     /* 波形包请求  */
-#define CMD_WAVE         0x04     /* 波形请求    */
+#define CMD_WAVE         0x03     /* 波形请求    */
+#define CMD_WAVE_PACK    0x04     /* 波形包请求  */
 #define CMD_TEST         0x77     /* 测试请求    */
 #define CMD_DISCOVER     0x41   	 /* 主站广播发现*/
 #define CMD_SET_ADDR  	 0x42   	 /* 主站广播给某uid配置地址*/

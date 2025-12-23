@@ -39,6 +39,6 @@
 "h723_vibrationsensor\app_acq.o"
 "h723_vibrationsensor\modbus_rtu.o"
 --library_type=microlib --strict --scatter "H723_VibrationSensor\H723_VibrationSensor.sct"
---summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--remove --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers
 --list "H723_VibrationSensor.map" -o H723_VibrationSensor\H723_VibrationSensor.axf
