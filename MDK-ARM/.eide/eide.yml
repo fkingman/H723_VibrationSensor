@@ -125,6 +125,7 @@ targets:
             $disableOutputTask: true
             $outputTaskExcludes:
               - .bin
+            misc-controls: --remove
             output-format: elf
             ro-base: ""
             rw-base: ""
