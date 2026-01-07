@@ -218,5 +218,5 @@ targets:
         baseAddr: "0x08000000"
         bin: ""
         interface: cmsis-dap
-        target: stm32f4x
+        target: stm32h7x
     uploader: OpenOCD
