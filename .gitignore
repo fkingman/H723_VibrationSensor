@@ -1,32 +1,15 @@
-# 1. 忽略 EIDE 和 编译器生成的构建目录
-build/
-Out/
-output/
-Debug/
-Release/
+# dot files
+/.vscode/launch.json
+/.settings
+/.eide/log
+/.eide.usr.ctx.json
 
-# 2. 忽略编译过程中的临时垃圾文件
-*.o
-*.d
-*.crf
-*.dep
-*.map
-*.htm
-*.lnp
-*.axf
-*.lst
-*.sct
-*.iex
-*.bin
-*.hex
-*.elf
+# project out
+/build
+/bin
+/obj
+/out
 
-# 3. 忽略 Keil/MDK 的工程备份 (如果你用了Keil)
-*.uvgui.*
-*.uvoptx
-*.bak
-*.bkp
-
-# 4. 忽略 VS Code 的本地配置 (可选)
-.vscode/
-.eide/
+# eide template
+*.ept
+*.eide-template

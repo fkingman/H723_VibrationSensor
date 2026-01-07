@@ -120,16 +120,12 @@ targets:
             warnings: all-warnings
           global:
             output-debug-info: enable
-            use-microLIB: true
           linker:
             $disableOutputTask: true
             $outputTaskExcludes:
               - .bin
             misc-controls: --remove
             output-format: elf
-            ro-base: ""
-            rw-base: ""
-            xo-base: ""
         scatterFilePath: ""
         storageLayout:
           RAM:

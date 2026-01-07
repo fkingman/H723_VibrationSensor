@@ -1,5 +1,6 @@
 #include "Eigenvalue calculation.h"
 #include "arm_const_structs.h"
+#include <string.h>  //  memcpy
 
 static arm_rfft_fast_instance_f32 S_rfft;
 static float32_t fftBuf[FFT_N_Z * 2]; // 复数运算缓冲区 (Z轴最长)
@@ -7,8 +8,7 @@ static float32_t fftBuf[FFT_N_Z * 2]; // 复数运算缓冲区 (Z轴最长)
 float g_z_offset_g  = 0.0f;   // 0g 偏移
 float fr = 50;
 
-extern const arm_cfft_instance_f32 arm_cfft_sR_f32_len1024;
-#define CFFT (&arm_cfft_sR_f32_len1024)
+//#define CFFT (&arm_cfft_sR_f32_len1024)
 
 //计算初始化函数
 void Calc_Init(void)
@@ -48,6 +48,19 @@ void Eigen_Separate_And_Convert(uint16_t *pZBuf, uint16_t *pXYBuf)
     for (uint32_t i = 0; i < FFT_N_XY; i++) {
         g_data_x[i] = XYcode_to_g(pXYBuf[2 * i]);
         g_data_y[i] = XYcode_to_g(pXYBuf[2 * i + 1]);
+    }
+}
+//去直流
+static void Remove_DC(float *data, uint32_t len)
+{
+    float sum = 0.0f;
+    for (uint32_t i = 0; i < len; i++) {
+        sum += data[i];
+    }
+    float mean = sum / (float)len;
+
+    for (uint32_t i = 0; i < len; i++) {
+        data[i] -= mean;
     }
 }
 
@@ -124,10 +137,46 @@ void Calc_TimeDomain_Only(float32_t *data, uint32_t len, AxisFeatureValue *resul
     result->pp   = pp;
     result->kurt = kurt;
 }
-//频域特征计算 (Z轴: PeakFreq, PeakAmp, 2xAmp)
-void Calc_FreqDomain_Z(float32_t *data, uint32_t len)
+//积分速度mm/s
+static void Integrate_Acc_To_Vel(float *data, uint32_t len)
 {
-    float32_t current_fs = (float32_t)ACQ_GetFreqHz();
+    uint16_t freq = g_cfg_freq_hz; // 获取当前采样率
+    if (freq == 0) return;
+
+    float dt = 1.0f / (float)freq;
+    float vel = 0.0f;
+    float val_prev = data[0]; 
+    
+    // 重力加速度常数: 1g ≈ 9806.65 mm/s²
+    const float G_TO_MM_S2 = 9806.65f; 
+
+    for (uint32_t i = 0; i < len; i++) {
+        float val_curr = data[i];
+        
+        // 梯形积分公式
+        vel += (val_prev + val_curr) * 0.5f * dt * G_TO_MM_S2;
+        val_prev = val_curr;
+        
+        data[i] = vel;
+    }
+
+    // 积分后必须再次去直流，消除积分漂移
+    Remove_DC(data, len);
+}
+//速度rms
+static float Calc_RMS_Only(float *data, uint32_t len, AxisFeatureValue *result)
+{
+    float sumSq = 0.0f;
+    for (uint32_t i = 0; i < len; i++) {
+        sumSq += data[i] * data[i];
+    }
+    result->rms = sqrtf(sumSq / (float)len);
+}
+
+//频域特征计算 (Z轴: PeakFreq, PeakAmp, 2xAmp)
+void Calc_FreqDomain_Z(float32_t *data, uint32_t len, AxisFeatureValue *result)
+{
+    uint16_t current_fs = g_cfg_freq_hz;
     
     for (uint32_t i = 0; i < len; i++) 
     {
@@ -162,7 +211,7 @@ void Calc_FreqDomain_Z(float32_t *data, uint32_t len)
     }
     
     // 计算物理频率
-    float32_t freq_res = current_fs / (float32_t)len;
+    float32_t freq_res = (float32_t)current_fs / (float32_t)len;
     float32_t peak_freq = (float32_t)maxIndex * freq_res;
 
     // 寻找 2x 主频幅值
@@ -173,25 +222,24 @@ void Calc_FreqDomain_Z(float32_t *data, uint32_t len)
         amp_2x = fftBuf[index_2x];
     }
 
-    Z_data.peakFreq = peak_freq; // 自动识别的主频
-    Z_data.peakAmp  = maxAmp;    // 主频幅值
-    Z_data.amp2x    = amp_2x;    // 2倍主频幅值
+    result->peakFreq = peak_freq; // 自动识别的主频
+    result->peakAmp  = maxAmp;    // 主频幅值
+    result->amp2x    = amp_2x;    // 2倍主频幅值
 }
 
 //包络特征计算
-void Calc_Envelope_Z(float32_t *data, uint32_t len)
+void Calc_Envelope_Z(float32_t *data, uint32_t len, AxisFeatureValue *result)
 {
-    // 1. 准备数据 (再次拷贝，因为之前的 fftBuf 被破坏了)
     for (uint32_t i = 0; i < len; i++) {
         fftBuf[2 * i]     = data[i];
         fftBuf[2 * i + 1] = 0.0f;
     }
 
-    // 2. FFT
+    // FFT
     extern const arm_cfft_instance_f32 arm_cfft_sR_f32_len4096;
     arm_cfft_f32(&arm_cfft_sR_f32_len4096, fftBuf, 0, 1);
 
-    // 3. Hilbert 变换 (频域操作)
+    // Hilbert 变换 
     // k=0, k=N/2 不变
     // k=1 ~ N/2-1 乘以 2
     // k=N/2+1 ~ N-1 归零
@@ -204,10 +252,10 @@ void Calc_Envelope_Z(float32_t *data, uint32_t len)
         fftBuf[2 * i + 1] = 0.0f;
     }
 
-    // 4. IFFT (逆变换)
+    // IFFT 
     arm_cfft_f32(&arm_cfft_sR_f32_len4096, fftBuf, 1, 1);
 
-    // 5. 取模 (得到包络信号) 并计算统计值
+    // 取模 
     float32_t sumSq = 0.0f;
     float32_t maxEnv = 0.0f;
     
@@ -215,7 +263,6 @@ void Calc_Envelope_Z(float32_t *data, uint32_t len)
         // IFFT 后需要除以 N 才能得到正确时域幅值吗？
         // CMSIS-DSP 的 IFFT 文档通常不带缩放，可能需要手动除以 len
         // 但为了包络检波，通常关心相对变化。标准公式通常要除以 N。
-        // 此处假设库未缩放：
         float32_t re = fftBuf[2 * i] / (float32_t)len;
         float32_t im = fftBuf[2 * i + 1] / (float32_t)len;
         
@@ -225,54 +272,43 @@ void Calc_Envelope_Z(float32_t *data, uint32_t len)
         if (envVal > maxEnv) maxEnv = envVal;
     }
 
-    // --- 更新 Z_data 结构体 ---
-    Z_data.envelope_vrms = sqrtf(sumSq / (float32_t)len);
-    Z_data.envelope_peak = maxEnv;
+    result->envelope_vrms = sqrtf(sumSq / (float32_t)len);
+    result->envelope_peak = maxEnv;
 }
 
-
-void print_FEATURE(void)
-{
-    printf("========== Vibration Analysis Result ==========\r\n");
-    printf("[X-Axis] Mean = %6.3f g   RMS = %6.3f g\r\n", X_data.mean, X_data.rms);
-    printf("         P-P  = %6.3f g   Kurt= %6.3f\r\n",   X_data.pp,   X_data.kurt);
-
-    printf("[Y-Axis] Mean = %6.3f g   RMS = %6.3f g\r\n", Y_data.mean, Y_data.rms);
-    printf("         P-P  = %6.3f g   Kurt= %6.3f\r\n",   Y_data.pp,   Y_data.kurt);
-
-    printf("[Z-Axis] Mean = %6.3f g   RMS = %6.3f g\r\n", Z_data.mean, Z_data.rms);
-    printf("         P-P  = %6.3f g   Kurt= %6.3f\r\n",   Z_data.pp,   Z_data.kurt);
-    printf("[Z-Freq] Main Freq = %5.1f Hz   Peak Amp = %.4f g\r\n", 
-           Z_data.peakFreq, Z_data.peakAmp);
-    printf("         2x Amp    = %.4f g\r\n", Z_data.amp2x);
-    printf("[Z-Enve] Env Vrms  = %.3f g     Env Peak = %.3f g\r\n", 
-           Z_data.envelope_vrms, Z_data.envelope_peak);
-	printf("Temp is: %.1f°C\n", Temp);
-    printf("===============================================\r\n\n");
-}
 	
 void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf)
 {	  
     Eigen_Separate_And_Convert(pZBuf, pXYBuf);
 
     Calc_TimeDomain_Only(g_data_x, FFT_N_XY, &X_data);
+    if (FFT_N_XY <= FFT_N_Z * 2) { 
+        memcpy(fftBuf, g_data_x, FFT_N_XY * sizeof(float)); 
+        Remove_DC(fftBuf, FFT_N_XY);       
+        Integrate_Acc_To_Vel(fftBuf, FFT_N_XY); 
+        Calc_RMS_Only(fftBuf, FFT_N_XY, &X_data); 
+    }
+
     Calc_TimeDomain_Only(g_data_y, FFT_N_XY, &Y_data);
+    if (FFT_N_XY <= FFT_N_Z * 2) {
+        memcpy(fftBuf, g_data_y, FFT_N_XY * sizeof(float));
+        Remove_DC(fftBuf, FFT_N_XY);
+        Integrate_Acc_To_Vel(fftBuf, FFT_N_XY);
+        Calc_RMS_Only(fftBuf, FFT_N_XY, &Y_data); 
+    }
+
     Calc_TimeDomain_Only(g_data_z, FFT_N_Z,  &Z_data);
+    Calc_FreqDomain_Z(g_data_z, FFT_N_Z, &Z_data);
+    Calc_Envelope_Z(g_data_z, FFT_N_Z, &Z_data);
+    memcpy(fftBuf, g_data_z, FFT_N_Z * sizeof(float));
+    Remove_DC(fftBuf, FFT_N_Z);
+    Integrate_Acc_To_Vel(fftBuf, FFT_N_Z);
+    Calc_RMS_Only(fftBuf, FFT_N_XY, &Z_data);
 
-    Calc_FreqDomain_Z(g_data_z, FFT_N_Z);
-    Calc_Envelope_Z(g_data_z, FFT_N_Z);
 }
 
 
-//Test
-void print_g_data(float *buf, uint32_t N)
-{
-    Eigen_Separate_And_Convert(ADC_Buffer_Z, ADC_Buffer_XY);
-    for (uint32_t i = 0; i < N; i++) 
-	{
-        printf("%.3f \n", buf[i]);
-	}
-}
+
 
 
 

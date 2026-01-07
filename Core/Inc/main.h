@@ -95,7 +95,7 @@ extern float32_t g_data_y[FFT_N_XY];
 extern float32_t g_data_z[FFT_N_Z];
 
 extern float Temp; 
-
+extern uint16_t g_cfg_freq_hz;
 //dma和modbus的缓冲区,串口3
 #define RX_DMA_BUF_SZ   512
 #define RX_FRAME_MAX    512

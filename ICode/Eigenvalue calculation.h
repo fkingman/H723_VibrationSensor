@@ -52,9 +52,9 @@ void Calc_Init(void);// 用于在上电时调用一次，负责 FFT 表初始化
 void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf);
 void Eigen_Separate_And_Convert(uint16_t *pZBuf, uint16_t *pXYBuf);//转g
 
-void Calc_TimeDomain_Only(float32_t *data, uint32_t len, AxisFeatureValue *result);
-void Calc_FreqDomain_Z(float32_t *data, uint32_t len);
-void Calc_Envelope_Z(float32_t *data, uint32_t len);
+//void Calc_TimeDomain_Only(float32_t *data, uint32_t len, AxisFeatureValue *result);
+//void Calc_FreqDomain_Z(float32_t *data, uint32_t len);
+//void Calc_Envelope_Z(float32_t *data, uint32_t len);
 void Z_Calib_Z_Upright_Neg1G(float *gBuf, uint32_t N);
 float Tempetature_Dis(void);
 void print_g_data(float *buf, uint32_t N);
