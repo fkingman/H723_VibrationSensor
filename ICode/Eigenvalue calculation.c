@@ -133,7 +133,7 @@ void Calc_TimeDomain_Only(float32_t *data, uint32_t len, AxisFeatureValue *resul
         kurt = ((float32_t)len * m4) / (m2 * m2);
     }
     result->mean = mean;
-    result->rms  = rms;
+    //result->rms  = rms;
     result->pp   = pp;
     result->kurt = kurt;
 }

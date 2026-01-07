@@ -107,7 +107,11 @@ targets:
         floatingPointHardware: double
         options:
           version: 4
-          afterBuildTasks: []
+          afterBuildTasks:
+            - name: new postbuild task
+              abortAfterFailed: true
+              command: 'echo "firmware: ${OutDir}/${ProjectName}.hex"'
+              disable: false
           asm-compiler: {}
           beforeBuildTasks: []
           c/cpp-compiler:
@@ -121,7 +125,6 @@ targets:
           global:
             output-debug-info: enable
           linker:
-            $disableOutputTask: true
             $outputTaskExcludes:
               - .bin
             misc-controls: --remove
@@ -211,4 +214,9 @@ targets:
         otherCmds: ""
         proType: 1
         speed: 8000
-    uploader: JLink
+      OpenOCD:
+        baseAddr: "0x08000000"
+        bin: ""
+        interface: cmsis-dap
+        target: stm32f4x
+    uploader: OpenOCD
