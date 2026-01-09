@@ -62,8 +62,15 @@ uint16_t Modbus_CRC16(const uint8_t *data, uint16_t length)
 
 static HAL_StatusTypeDef uart3_send_dma(uint8_t *buf, uint16_t len)
 {
-    if (g_tx_busy)
-        return HAL_BUSY;
+    uint32_t tickstart = HAL_GetTick();   
+    while (g_tx_busy)
+    {
+        if ((HAL_GetTick() - tickstart) > 1000u) 
+        {
+            g_tx_busy = 0; // 强制复位繁忙标志，尝试挽救
+            break; 
+        }
+    }
 
     g_tx_busy = 1;
     return HAL_UART_Transmit_DMA(&huart3, buf, len);
@@ -203,12 +210,6 @@ static void send_wave_pkt(uint8_t dev_id, const float *buf, uint8_t seq, uint8_t
 
 //		HAL_UART_Transmit_DMA(&huart3, tx, (uint16_t)(p - tx));
 		uart3_send_dma(tx, (uint16_t)(p - tx));	
-}
-
-static void dump_uid(const char* tag, const uint8_t* p) {
-    printf("%s:", tag);
-    for (int i = 0; i < 12; ++i) printf(" %02X", p[i]);
-    printf("\r\n");
 }
 
 /**********************************广播发现应答**********************************/

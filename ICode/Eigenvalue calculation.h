@@ -24,7 +24,7 @@
 #define XY_ADC_RESOLUTION  				 65535.0f		
 #define XY_REF_VOLTAGE             3.30f
 #define XY_REF_VOLTAGE_BIAS        1.65f
-#define XY_SENSITIVITY             0.063f     /* V/g */
+#define XY_SENSITIVITY             0.063f      /* V/g */
 
 #define MIN_FREQ_HZ  			 10.0f
 #define MAX_FREQ_HZ        1000.0f

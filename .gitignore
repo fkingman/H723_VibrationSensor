@@ -1,15 +1,24 @@
-# dot files
-/.vscode/launch.json
-/.settings
-/.eide/log
-/.eide.usr.ctx.json
+# Keil MDK ignore files
+*.o
+*.d
+*.crf
+*.dep
+*.axf
+*.htm
+*.lnp
+*.sct
+*.lst
+*.map
+*.hex
+*.bin
+*.uvguix.*
+*.uvoptx
+*.uvgui.*
+JLinkLog.txt
+*.bak
+RTE/
 
-# project out
-/build
-/bin
-/obj
-/out
-
-# eide template
-*.ept
-*.eide-template
+# Objects and Listings folders
+Objects/
+Listings/
+DebugConfig/

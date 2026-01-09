@@ -174,35 +174,49 @@ static float Calc_RMS_Only(float *data, uint32_t len, AxisFeatureValue *result)
 }
 
 //频域特征计算 (Z轴: PeakFreq, PeakAmp, 2xAmp)
+// 替换整个 Calc_FreqDomain_Z 函数
 void Calc_FreqDomain_Z(float32_t *data, uint32_t len, AxisFeatureValue *result)
 {
     uint16_t current_fs = g_cfg_freq_hz;
     
-    for (uint32_t i = 0; i < len; i++) 
-    {
-        fftBuf[2 * i]     = data[i];
-        fftBuf[2 * i + 1] = 0.0f;
+    // 1. 使用 RFFT (实数FFT)，直接使用实数输入，输出为压缩的复数格式
+    arm_rfft_fast_f32(&S_rfft, data, fftBuf, 0);
+
+    // 2. 计算幅值 (Modulus)
+    // arm_rfft_fast_f32 的输出 fftBuf 布局如下：
+    // [0]: 直流分量(DC)实部
+    // [1]: 奈奎斯特分量实部
+    // [2]: f1 实部, [3]: f1 虚部
+    // [4]: f2 实部, [5]: f2 虚部 ...
+    
+    // 先计算从 index 2 开始的复数部分的模
+    // 结果会直接存回 fftBuf[2], fftBuf[3]... 紧凑排列
+    if (len > 2) {
+        arm_cmplx_mag_f32(&fftBuf[2], &fftBuf[2], len / 2 - 1);
     }
     
-    extern const arm_cfft_instance_f32 arm_cfft_sR_f32_len4096;
-    arm_cfft_f32(&arm_cfft_sR_f32_len4096, fftBuf, 0, 1);
+    // 单独处理 DC 分量 (取绝对值)
+    float32_t dc_val = fabsf(fftBuf[0]);
     
-    arm_cmplx_mag_f32(fftBuf, fftBuf, len);    // 4. 计算幅值 (Modulus)
-
-    // 归一化
-    // 直流分量除以 N，交流分量除以 N/2
-    float32_t norm = 2.0f / (float32_t)len;
-    fftBuf[0] /= (float32_t)len; 
+    // 3. 整理数组，使其变成标准的 [Amp_DC, Amp_f1, Amp_f2, ...]
+    // 将计算好的交流幅值从 fftBuf[2] 搬移到 fftBuf[1]
+    memmove(&fftBuf[1], &fftBuf[2], (len / 2 - 1) * sizeof(float32_t));
+    fftBuf[0] = dc_val;
+    
+    // 4. 归一化
+    // 实数 FFT 输出的幅值通常放大了，需要归一化
+    fftBuf[0] /= (float32_t)len;            // 直流除以 N
+    float32_t norm = 2.0f / (float32_t)len; // 交流除以 N/2
+    
     for (uint32_t i = 1; i < len / 2; i++) {
         fftBuf[i] *= norm;
     }
 
-    //寻找主峰 (Max Peak) -> 认定为主频
+    // 5. 寻找主峰 (逻辑保持不变，但循环上限确保正确)
     float32_t maxAmp = 0.0f;
     uint32_t maxIndex = 0;
     
-    // 从索引 5 开始找（避开 0Hz 直流和极低频噪声，例如 5*分辨率 频率以下的）
-    // 假设分辨率 6Hz，这就避开了 30Hz 以下。如果你的转速很慢，这里要改成 1
+    // 从索引 3 开始找，避开低频
     for (uint32_t i = 3; i < len / 2; i++) {
         if (fftBuf[i] > maxAmp) {
             maxAmp = fftBuf[i];
@@ -218,60 +232,68 @@ void Calc_FreqDomain_Z(float32_t *data, uint32_t len, AxisFeatureValue *result)
     float32_t amp_2x = 0.0f;
     uint32_t index_2x = maxIndex * 2;
     
-    if (index_2x < len / 2) { // 边界检查
+    if (index_2x < len / 2) { 
         amp_2x = fftBuf[index_2x];
     }
 
-    result->peakFreq = peak_freq; // 自动识别的主频
-    result->peakAmp  = maxAmp;    // 主频幅值
-    result->amp2x    = amp_2x;    // 2倍主频幅值
+    result->peakFreq = peak_freq; 
+    result->peakAmp  = maxAmp;    
+    result->amp2x    = amp_2x;    
 }
 
-//包络特征计算
+// 包络特征计算 (RFFT 优化版)
 void Calc_Envelope_Z(float32_t *data, uint32_t len, AxisFeatureValue *result)
 {
-    for (uint32_t i = 0; i < len; i++) {
-        fftBuf[2 * i]     = data[i];
-        fftBuf[2 * i + 1] = 0.0f;
+    // 1. RFFT 正变换：计算 x(t) 的频谱
+    // 输入：data (实数 x(t))
+    // 输出：fftBuf (压缩格式的复数频谱)
+    // S_rfft 已经在 Calc_Init 中初始化
+    arm_rfft_fast_f32(&S_rfft, data, fftBuf, 0);
+
+    // 2. 频域处理：构造希尔伯特变换的频谱
+    // 希尔伯特变换在频域相当于所有正频率乘以 -j
+    // RFFT 结果 fftBuf 布局：[DC, Nyquist, Re1, Im1, Re2, Im2, ...]
+    
+    // DC 和 Nyquist 分量的希尔伯特变换理论上为 0 (或不需要移相)
+    // 这里简单清零以消除直流偏置影响
+    fftBuf[0] = 0.0f; 
+    fftBuf[1] = 0.0f;
+
+    // 遍历所有交流分量 (k=1 到 N/2 - 1)
+    // 索引从 2 开始，每次步进 2
+    for (uint32_t i = 2; i < len; i += 2) {
+        float32_t re = fftBuf[i];
+        float32_t im = fftBuf[i+1];
+        
+        // 乘以 -j : (Re + jIm) * (-j) = Im - jRe
+        fftBuf[i]     = im;   // 新实部 = 旧虚部
+        fftBuf[i+1]   = -re;  // 新虚部 = -旧实部
     }
 
-    // FFT
-    extern const arm_cfft_instance_f32 arm_cfft_sR_f32_len4096;
-    arm_cfft_f32(&arm_cfft_sR_f32_len4096, fftBuf, 0, 1);
+    // 3. RIFFT 逆变换：得到时域的希尔伯特变换信号 h(t)
+    // 输入：fftBuf (修改后的频谱)
+    // 输出：将结果存入 fftBuf 的后半段 (&fftBuf[len])，避免覆盖频谱
+    // 注意：FFT/IFFT 后通常幅度会放大 N 倍，后面需要归一化
+    arm_rfft_fast_f32(&S_rfft, fftBuf, &fftBuf[len], 1);
 
-    // Hilbert 变换 
-    // k=0, k=N/2 不变
-    // k=1 ~ N/2-1 乘以 2
-    // k=N/2+1 ~ N-1 归零
-    for (uint32_t i = 1; i < len / 2; i++) {
-        fftBuf[2 * i]     *= 2.0f;
-        fftBuf[2 * i + 1] *= 2.0f;
-    }
-    for (uint32_t i = len / 2 + 1; i < len; i++) {
-        fftBuf[2 * i]     = 0.0f;
-        fftBuf[2 * i + 1] = 0.0f;
-    }
-
-    // IFFT 
-    arm_cfft_f32(&arm_cfft_sR_f32_len4096, fftBuf, 1, 1);
-
-    // 取模 
+    // 4. 合成包络并计算特征值
+    // Envelope = sqrt( x(t)^2 + h(t)^2 )
     float32_t sumSq = 0.0f;
     float32_t maxEnv = 0.0f;
-    
+    float32_t inv_len = 1.0f / (float32_t)len; // 用于 IFFT 结果的归一化
+
     for (uint32_t i = 0; i < len; i++) {
-        // IFFT 后需要除以 N 才能得到正确时域幅值吗？
-        // CMSIS-DSP 的 IFFT 文档通常不带缩放，可能需要手动除以 len
-        // 但为了包络检波，通常关心相对变化。标准公式通常要除以 N。
-        float32_t re = fftBuf[2 * i] / (float32_t)len;
-        float32_t im = fftBuf[2 * i + 1] / (float32_t)len;
-        
-        float32_t envVal = sqrtf(re * re + im * im);
+        float32_t x = data[i];                   // 原始信号 x(t)
+        float32_t h = fftBuf[len + i] * inv_len; // 希尔伯特变换信号 h(t)，需归一化
+
+        // 计算瞬时包络
+        float32_t envVal = sqrtf(x * x + h * h);
         
         sumSq += envVal * envVal;
         if (envVal > maxEnv) maxEnv = envVal;
     }
 
+    // 计算包络的有效值和峰值
     result->envelope_vrms = sqrtf(sumSq / (float32_t)len);
     result->envelope_peak = maxEnv;
 }

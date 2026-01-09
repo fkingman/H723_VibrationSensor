@@ -23,13 +23,6 @@
 /* USER CODE BEGIN 0 */
 
 
-int fputc(int ch, FILE *f)
-{
-		uint8_t temp = (uint8_t)ch;
-    HAL_UART_Transmit(&huart3, &temp, 1, 0xFFFF);
-    return ch;
-}
-
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart3;

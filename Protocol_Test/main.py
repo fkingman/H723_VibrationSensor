@@ -16,7 +16,7 @@ CONFIG = {
     'BAUD': 9600,  # 波特率
     'ADDR': 0x00,  # 默认目标设备地址 (非广播时使用)
     'TIMEOUT': 2.0,  # 默认超时
-    'OTA_FILE': 'F411_VibrationSensor_RTOS.bin',  # OTA固件名
+    'OTA_FILE': 'H723_VibrationSensor.bin',  # OTA固件名
     'SAVE_DIR': 'wave_data',  # 波形保存路径
     'OTA_ERASE_TIME': 8.0,  # OTA擦除等待时间
     'OTA_PACKET_SIZE': 256  # OTA包大小
