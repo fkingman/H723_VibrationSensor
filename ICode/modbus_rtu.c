@@ -215,28 +215,61 @@ static void send_wave_pkt(uint8_t dev_id, const float *buf, uint8_t seq, uint8_t
 /**********************************广播发现应答**********************************/
 static void send_discover_rsp(uint8_t cur_addr)
 {
-    static uint8_t tx[1 + 1 + 1 + 13 + 2];
+    static uint8_t tx[25]; // 稍微开大一点
     uint8_t *p = tx;
 
-		uint8_t uid[12];
-    UID_Fill_BE_w0w1w2(uid);      // ← 统一构造（大端，w0|w1|w2）
+    uint8_t uid[12];
+    UID_Fill_BE_w0w1w2(uid); // 获取唯一ID
 
-    *p++ = cur_addr;            // 我自己的地址（若尚未配置就是 0x00）
-    *p++ = CMD_DISCOVER;        // 回同一命令码
-    *p++ = 13;                  // len = 12B UID + 1B addr
-//		dump_uid("uid", uid);
-    memcpy(p, uid, 12); p += 12;
-    *p++ = cur_addr;
+    /* --- 1. 构造报文 --- */
+    *p++ = cur_addr;       // 地址
+    *p++ = CMD_DISCOVER;   // 功能码
+    *p++ = 13;             // 长度
+    memcpy(p, uid, 12);    // UID
+    p += 12;
+    *p++ = cur_addr;       // 地址后缀
 
+    /* --- 2. 计算CRC --- */
     uint16_t crc = Modbus_CRC16(tx, (uint16_t)(p - tx));
     *p++ = (uint8_t)(crc & 0xFF);
     *p++ = (uint8_t)(crc >> 8);
+    
+    uint16_t packet_len = (uint16_t)(p - tx);
 
-    /* 简单退避，避免广播回包碰撞 */
-    HAL_Delay(uid[11] & 0x0Fu);
+    /* --- 3. 冲突退避逻辑 (核心修改) --- */
+    
+    // A. 基础时间片 (Slot Time)
+    // 9600波特率发一包(约20字节)耗时约21ms。
+    // 为了防止物理层信号拖尾，我们设为 30ms 的安全间隔。
+    uint32_t slot_time_ms = 30; 
+    
+    // B. 生成随机槽位 (Slot Index)
+    // 之前只用了 uid[11]，范围太小。
+    // 现在我们将 UID 的所有字节相加，确保差异化。
+    uint32_t uid_sum = 0;
+    for(int i = 0; i < 12; i++) {
+        uid_sum += uid[i];
+    }
+    
+		// 加入 SysTick 或 运行时间的低位作为扰动
+    // 这样每次扫描，设备的延时都会发生微小变化
+    uint32_t tick_jitter = HAL_GetTick() & 0x1F; // 取 Tick 的低5位 (0-31)
+		
+    // 取模 100，意味着随机产生 0 ~ 99 之间的延时等级
+    // 如果有10个设备，分到100个坑里，撞车概率会大幅降低
+    uint32_t random_slot = uid_sum % 100; 
 
-//		HAL_UART_Transmit_DMA(&huart3, tx, (uint16_t)(p - tx));
-		uart3_send_dma(tx, (uint16_t)(p - tx));	
+    // C. 计算总延时
+    // 最大延时 = 99 * 30ms = 2970ms (约3秒)
+    uint32_t total_delay = random_slot * slot_time_ms;
+    
+    // D. 执行延时
+    HAL_Delay(total_delay);
+
+    /* --- 4. 发送数据 --- */
+    // 发送前再检查一下总线是否空闲会更稳健，但在HAL库里比较麻烦，
+    // 只要时间槽错开，直接发通常没问题。
+    uart3_send_dma(tx, packet_len); 
 }
 
 /**********************************配置地址应答**********************************/

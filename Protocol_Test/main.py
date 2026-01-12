@@ -76,135 +76,178 @@ def open_serial():
         return None
 
 
-# ==========================================
-# [功能] 1. 发现设备与读取 UID
-# ==========================================
-def task_discover(silent=False):
+def parse_packet_from_buffer(buffer):
     """
-    发送广播发现命令，返回找到的 (addr, uid_bytes)
-    silent: 是否静默模式(不打印详细信息)
+    从缓冲区尝试解析一个完整帧 (固定长度18字节)
+    返回: (parsed_frame, remaining_buffer)
+    """
+    FRAME_LEN = 18
+    if len(buffer) < FRAME_LEN:
+        return None, buffer
+
+    while len(buffer) >= FRAME_LEN:
+        # 1. 初步特征检查: 命令码必须是 CMD_DISCOVER (0x41)
+        cmd = buffer[1]
+        if cmd == CMD_DISCOVER:
+            potential_frame = buffer[:FRAME_LEN]
+            # 2. CRC 校验
+            payload_crc = calc_crc16(potential_frame[:-2])
+            packet_crc = struct.unpack('<H', potential_frame[-2:])[0]
+            if payload_crc == packet_crc:
+                return potential_frame, buffer[FRAME_LEN:]
+
+        # 滑动窗口: 丢弃 buffer[0]，继续向后找
+        buffer = buffer[1:]
+
+    return None, buffer
+
+# ==========================================
+# [重写] 1. 发现设备 (支持多从站+随机延时)
+# ==========================================
+def task_scan_devices(timeout=5.0, silent=False):
+    """
+    发送广播，并在 timeout 时间内持续监听总线
+    返回: list of (addr, uid_bytes, uid_str)
     """
     ser = open_serial()
-    if not ser: return None, None
+    if not ser: return []
+
+    found_devices = []  # 存储结果
+    found_uids = set()  # 用于去重
 
     try:
-        if not silent: print("\n[扫描] 正在发送广播发现命令 (Addr: 0x00)...")
+        if not silent:
+            print(f"\n[扫描] 发送广播发现命令，监听总线 {timeout}秒...")
 
-        # 构造广播帧 (补足7字节): [00] [41] [00 00 00] [CRC_L] [CRC_H]
+        # 1. 发送广播
         frame = build_frame(0x00, CMD_DISCOVER, b'\x00\x00\x00')
         ser.write(frame)
 
-        # 接收响应: [Addr] [41] [Len=13] [UID(12B)] [Addr] [CRC]
-        EXPECTED_LEN = 18
+        # 2. 进入监听窗口
+        start_time = time.time()
+        rx_buffer = b''
 
-        ser.timeout = 1.0
-        resp = ser.read(EXPECTED_LEN)
+        while (time.time() - start_time) < timeout:
+            if ser.in_waiting > 0:
+                rx_buffer += ser.read(ser.in_waiting)
 
-        if len(resp) != EXPECTED_LEN:
-            if not silent: print(f"[错误] 响应超时或长度错误 (Len={len(resp)})")
-            return None, None
+            # 尝试从缓冲区解析数据包
+            while True:
+                frame, rx_buffer = parse_packet_from_buffer(rx_buffer)
+                if frame:
+                    addr = frame[0]
+                    uid_raw = frame[3:15]
+                    uid_str = uid_raw.hex().upper()
 
-        # 校验 CRC
-        if calc_crc16(resp[:-2]) != struct.unpack('<H', resp[-2:])[0]:
-            if not silent: print("[错误] CRC 校验失败")
-            return None, None
-
-        # 解析数据
-        dev_addr = resp[0]
-        cmd = resp[1]
-        uid_bytes = resp[3:15]
-
-        if cmd != CMD_DISCOVER:
-            if not silent: print(f"[错误] 命令码错误: 0x{cmd:02X}")
-            return None, None
-
-        uid_str = uid_bytes.hex().upper()
+                    if uid_str not in found_uids:
+                        found_uids.add(uid_str)
+                        found_devices.append((addr, uid_raw, uid_str))
+                        if not silent:
+                            print(f" -> 捕获设备: Addr=0x{addr:02X}, UID={uid_str}")
+                else:
+                    break
+            time.sleep(0.01)
 
         if not silent:
-            print("\n" + "=" * 40)
-            print(" [发现设备]")
-            print("=" * 40)
-            print(f" 设备地址: 0x{dev_addr:02X}")
-            print(f" 设备 UID: {uid_str}")
-            print("=" * 40 + "\n")
+            print("-" * 40)
+            print(f"扫描结束，共发现 {len(found_devices)} 个设备。")
+            print("-" * 40)
 
-            # 自动更新当前配置地址
-            CONFIG['ADDR'] = dev_addr
-            print(f"已自动将操作地址更新为: 0x{dev_addr:02X}")
-
-        return dev_addr, uid_bytes
+        return found_devices
 
     except Exception as e:
-        if not silent: print(f"运行时错误: {e}")
-        return None, None
+        if not silent: print(f"扫描出错: {e}")
+        return []
     finally:
         ser.close()
 
 
+# 保留此函数名以兼容 Main 菜单调用
+def task_discover(silent=False):
+    devs = task_scan_devices(timeout=5.0, silent=silent)
+    if devs:
+        # 默认自动选中第一个
+        addr, uid, _ = devs[0]
+        if not silent:
+            print(f"已自动锁定第一个设备: 0x{addr:02X}")
+            CONFIG['ADDR'] = addr
+        return addr, uid
+    return None, None
+
+
 # ==========================================
-# [功能] 2. 设置设备地址 (新增)
+# [重写] 2. 设置设备地址 (配合多设备扫描)
 # ==========================================
 def task_set_address():
-    print("\n--- 修改设备地址 ---")
-    print("注意: 修改地址需要先通过广播获取设备UID。")
-    print("正在扫描设备...")
+    print("\n--- 修改设备地址 (多设备模式) ---")
 
-    # 1. 先扫描获取 UID
-    current_addr, uid_bytes = task_discover(silent=True)
+    # 1. 扫描所有设备 (超时3秒，等待随机延时)
+    devices = task_scan_devices(timeout=5.0, silent=False)
 
-    if uid_bytes is None:
-        print("[失败] 未扫描到设备，无法修改地址。")
+    if not devices:
+        print("[失败] 未找到任何设备。")
         return
 
-    print(f"-> 找到设备，当前地址: 0x{current_addr:02X}")
-    print(f"-> 设备 UID: {uid_bytes.hex().upper()}")
+    # 2. 列出设备供用户选择
+    print("\n请选择要修改的设备:")
+    for i, (addr, _, uid_str) in enumerate(devices):
+        print(f" [{i + 1}] 地址: 0x{addr:02X} | UID: {uid_str}")
 
-    # 2. 输入新地址
+    sel = input("\n请输入序号 [1-N] (q退出): ").strip()
+    if sel.lower() == 'q': return
+
     try:
+        idx = int(sel) - 1
+        if not (0 <= idx < len(devices)):
+            print("序号无效")
+            return
+        target_current_addr, target_uid_bytes, target_uid_str = devices[idx]
+    except ValueError:
+        print("输入无效")
+        return
+
+    # 3. 输入新地址
+    try:
+        print(f"\n当前选定: UID {target_uid_str} (原地址 0x{target_current_addr:02X})")
         new_addr_str = input("请输入新地址 (Hex, 例如 01): ").strip()
         new_addr = int(new_addr_str, 16)
-        if  new_addr > 0xFF:
+        if new_addr > 0xFF:
             print("[错误] 地址必须在 00-FF 之间")
             return
     except ValueError:
         print("[错误] 输入格式无效")
         return
 
-    # 3. 发送设置命令
+    # 4. 发送设置命令
     ser = open_serial()
     if not ser: return
 
     try:
-        print(f"\n[设置] 正在将地址修改为 0x{new_addr:02X}...")
-
-        # 构造 Payload: [UID (12字节)] + [新地址 (1字节)]
-        # 对应 C 代码 HandleSetAddr_Broadcast 中的结构
-        payload = uid_bytes + struct.pack('B', new_addr)
-
-        # 发送广播包: [00] [42] [UID...] [Addr] [CRC]
+        print(f"\n[设置] 正在将 UID {target_uid_str[-4:]}.. 修改为 0x{new_addr:02X}...")
+        # 构造设置指令
+        payload = target_uid_bytes + struct.pack('B', new_addr)
         frame = build_frame(0x00, CMD_SET_ADDR, payload)
         ser.write(frame)
 
-        # 接收 ACK: [NewAddr] [42] [02] [4F] [4B] [CRC]
+        # 接收 ACK
+        ser.timeout = 1.0
         ack = ser.read(7)
 
         if len(ack) == 7:
             if ack[0] == new_addr and ack[1] == CMD_SET_ADDR and ack[3] == 0x4F:
                 print(f"[成功] 设备地址已修改为 0x{new_addr:02X}")
-                CONFIG['ADDR'] = new_addr  # 更新全局配置
+                # 如果改的是当前配置的地址，顺便更新配置
+                if CONFIG['ADDR'] == target_current_addr:
+                    CONFIG['ADDR'] = new_addr
             else:
-                print(f"[失败] 收到异常响应: {ack.hex()}")
+                print(f"[警告] 收到响应但不匹配: {ack.hex()}")
         else:
-            # 有时候修改地址后设备重启或总线忙，可能没收到ACK但实际生效了
             print("[提示] 未收到确认 ACK (可能修改成功但响应超时)")
-            print("建议重新扫描验证。")
 
     except Exception as e:
         print(f"运行时错误: {e}")
     finally:
         ser.close()
-
-
 # ==========================================
 # [功能] 3. 设置采样频率
 # ==========================================
