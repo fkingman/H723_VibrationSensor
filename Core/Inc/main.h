@@ -85,17 +85,17 @@ void Error_Handler(void);
 #define FFT_N_XY  		 4096  							// 你需要采集的点数
 //#define Z_Sample_freq  25598.36								// Z轴采集频率
 
-#define ADC_Buffer_Z_ADDR      0x24000000
-#define ADC_Buffer_XY_ADDR     0x24004000
-#define Tx_Wave_Buffer_Z_ADDR  0x2400C000
+//#define ADC_Buffer_Z_ADDR      0x24000000
+//#define ADC_Buffer_XY_ADDR     0x24004000
+//#define Tx_Wave_Buffer_Z_ADDR  0x2400C000
 
-#define ADC_Buffer_Z       ((uint16_t *)ADC_Buffer_Z_ADDR)
-#define ADC_Buffer_XY      ((uint16_t *)ADC_Buffer_XY_ADDR)
-#define Tx_Wave_Buffer_Z   ((float *)Tx_Wave_Buffer_Z_ADDR)
+//#define ADC_Buffer_Z       ((uint16_t *)ADC_Buffer_Z_ADDR)
+//#define ADC_Buffer_XY      ((uint16_t *)ADC_Buffer_XY_ADDR)
+//#define Tx_Wave_Buffer_Z   ((float *)Tx_Wave_Buffer_Z_ADDR)
 	
-//extern uint16_t ADC_Buffer_Z[FFT_N_Z * 2];     
-//extern uint16_t ADC_Buffer_XY[FFT_N_XY * 2 * 2];
-//extern float Tx_Wave_Buffer_Z[FFT_N_Z];
+extern uint16_t ADC_Buffer_Z[FFT_N_Z * 2];     
+extern uint16_t ADC_Buffer_XY[FFT_N_XY * 2 * 2];
+extern float Tx_Wave_Buffer_Z[FFT_N_Z];
 extern uint16_t Process_Buffer_Z[FFT_N_Z];
 extern uint16_t Process_Buffer_XY[FFT_N_XY * 2];
 
@@ -109,13 +109,13 @@ extern uint16_t g_cfg_freq_hz;
 #define RX_DMA_BUF_SZ   512
 #define RX_FRAME_MAX    512
 
-#define RX_DMA_BUF_ADDR     0x24010000
-#define RX_FRAME_BUF_ADDR   0x24010200
-#define rx_dma_buf          ((uint8_t *)RX_DMA_BUF_ADDR)
-#define rx_frame_buf        ((uint8_t *)RX_FRAME_BUF_ADDR)
+//#define RX_DMA_BUF_ADDR     0x24010000
+//#define RX_FRAME_BUF_ADDR   0x24010200
+//#define rx_dma_buf          ((uint8_t *)RX_DMA_BUF_ADDR)
+//#define rx_frame_buf        ((uint8_t *)RX_FRAME_BUF_ADDR)
 
-//extern uint8_t  rx_dma_buf[RX_DMA_BUF_SZ]; 
-//extern uint8_t  rx_frame_buf[RX_FRAME_MAX];
+extern uint8_t  rx_dma_buf[RX_DMA_BUF_SZ]; 
+extern uint8_t  rx_frame_buf[RX_FRAME_MAX];
 extern volatile uint16_t rx_frame_len;
 extern volatile uint8_t  rx_frame_ready;
 

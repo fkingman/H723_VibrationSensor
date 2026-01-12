@@ -37,8 +37,8 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 //U3接收
-//__attribute__((section(".ARM.__at_0x24010000"))) uint8_t rx_dma_buf[RX_DMA_BUF_SZ];
-//__attribute__((section(".ARM.__at_0x24010200"))) uint8_t rx_frame_buf[RX_FRAME_MAX];
+__attribute__((section(".ARM.__at_0x24010000"))) uint8_t rx_dma_buf[RX_DMA_BUF_SZ];
+__attribute__((section(".ARM.__at_0x24010200"))) uint8_t rx_frame_buf[RX_FRAME_MAX];
 volatile uint16_t rx_frame_len = 0;
 volatile uint8_t  rx_frame_ready = 0;
 
@@ -52,9 +52,9 @@ uint16_t wave_points = FLASH_CFG_DEFAULT_POINTS;
 //组态结构体
 Config_t device_config;
 //ADC
-//__attribute__((section(".ARM.__at_0x24000000"))) uint16_t ADC_Buffer_Z[FFT_N_Z * 2];// Z轴8192点乒乓结构
-//__attribute__((section(".ARM.__at_0x24004000"))) uint16_t ADC_Buffer_XY[FFT_N_XY * 2 * 2];// XY轴(1024点 * 2通道) * 2 = 4096点乒乓
-//__attribute__((section(".ARM.__at_0x2400C000"))) float Tx_Wave_Buffer_Z[FFT_N_Z];// 专门用于发送的“冷数据”区
+__attribute__((section(".ARM.__at_0x24000000"))) uint16_t ADC_Buffer_Z[FFT_N_Z * 2];// Z轴8192点乒乓结构
+__attribute__((section(".ARM.__at_0x24004000"))) uint16_t ADC_Buffer_XY[FFT_N_XY * 2 * 2];// XY轴(1024点 * 2通道) * 2 = 4096点乒乓
+__attribute__((section(".ARM.__at_0x2400C000"))) float Tx_Wave_Buffer_Z[FFT_N_Z];// 专门用于发送的“冷数据”区
 uint16_t Process_Buffer_Z[FFT_N_Z];                   // Z轴计算区
 uint16_t Process_Buffer_XY[FFT_N_XY * 2];             // XY轴计算区
 
