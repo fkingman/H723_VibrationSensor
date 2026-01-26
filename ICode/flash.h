@@ -59,8 +59,7 @@ void Flash_ReadOTAInfo(uint32_t* out_flag, uint32_t* out_len);
 
 /* 设置 OTA 信息 (App下载完请求升级，或 Bootloader升级完清除标志) */
 /* 这里的 flag 传入 OTA_FLAG_UPDATE_NEEDED 表示请求升级，传入 0 表示清除 */
-HAL_StatusTypeDef Flash_SetOTAInfo(uint32_t flag, uint32_t len);
-
+HAL_StatusTypeDef Flash_SetOTAInfo(uint32_t flag, uint32_t len, uint32_t crc);
 
 /* ==== 兼容旧代码的辅助接口 ==== */
 uint8_t Flash_ReadDeviceAddr(void);

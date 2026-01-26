@@ -7,7 +7,7 @@ import pandas as pd
 from datetime import datetime
 import os
 import sys
-
+import zlib
 # ==========================================
 # [配置] 全局参数
 # ==========================================
@@ -402,26 +402,43 @@ def task_read_sensor():
 
 
 # ==========================================
-# [功能] 5. OTA 固件升级
+# [功能] 5. OTA 固件升级 (适配 CRC32 全量校验版)
 # ==========================================
 
-def send_and_wait_ota(ser, frame, description, expected_len=7):
+def send_and_wait_ota(ser, frame, description, expected_len=7, timeout=5.0):
+    """
+    发送并等待 OTA 应答
+    :param timeout: 超时时间可配，Start 指令因为要擦除 Flash，建议给大一点
+    """
     ser.write(frame)
     start_time = time.time()
     received = b''
+
     while len(received) < expected_len:
-        if time.time() - start_time > 5.0: break
+        if time.time() - start_time > timeout:
+            break
         if ser.in_waiting:
             received += ser.read(ser.in_waiting)
 
     if len(received) != expected_len:
-        print(f"\n [OTA] {description} 失败: 长度不符 ({len(received)}/{expected_len})")
+        print(f"\n [OTA] {description} 失败: 超时或长度不符 (收:{len(received)}/需:{expected_len})")
         return False
+
+    # 解析 CRC
     recv_crc = struct.unpack('<H', received[-2:])[0]
     calc_crc = calc_crc16(received[:-2])
+
     if recv_crc != calc_crc:
-        print(f"\n [OTA] {description} CRC错误")
+        print(f"\n [OTA] {description} CRC校验错误")
         return False
+
+    # 检查是否收到设备发回的错误码 (例如 0xBAD1)
+    # 假设正常的 ACK 功能码是 cmd，错误可能是 cmd | 0x80
+    if len(received) > 2 and (received[1] & 0x80):
+        err_code = received[2] if len(received) > 2 else 0xFF
+        print(f"\n [OTA] {description} 设备返回错误 (ErrCode: 0x{err_code:02X})")
+        return False
+
     print(f"\r {description} OK", end='')
     return True
 
@@ -437,53 +454,87 @@ def task_ota_update():
         print(" 文件不存在")
         return
 
+    # 1. 读取并处理固件
     with open(bin_path, 'rb') as f:
         firmware_data = bytearray(f.read())
+
+    # 32字节对齐填充 (Flash写入要求)
     remainder = len(firmware_data) % 32
-    if remainder != 0: firmware_data += b'\xFF' * (32 - remainder)
+    if remainder != 0:
+        firmware_data += b'\xFF' * (32 - remainder)
+
     padded_len = len(firmware_data)
+
+    # [新增] 计算全量 CRC32 (对应 STM32 端的 Soft_CRC32)
+    # & 0xFFFFFFFF 是为了确保得到无符号 32 位整数
+    firmware_crc32 = zlib.crc32(firmware_data) & 0xFFFFFFFF
+
     print(f"\n 固件准备就绪: {padded_len} bytes")
+    print(f" 全局 CRC32: 0x{firmware_crc32:08X}")  # 打印出来方便调试对比
 
     ser = open_serial()
     if not ser: return
-    ser.timeout = 0.1
+    # ser.timeout = 0.1 # 建议不要在这里设死，依赖 send_and_wait_ota 的逻辑即可
 
     try:
+        # 2. 发送 OTA Start
         print(" 发送 OTA Start 指令...")
         payload = struct.pack('>I', padded_len)
         frame = build_frame(CONFIG['ADDR'], CMD_OTA_START, payload)
-        if not send_and_wait_ota(ser, frame, "OTA Start"): return
 
-        print(f"\n 等待 Flash 擦除 ({CONFIG['OTA_ERASE_TIME']}s)...")
-        time.sleep(CONFIG['OTA_ERASE_TIME'])
+        # 注意：H7 擦除 384KB 可能需要 1-3秒，这里 timeout 给 8秒 比较稳妥
+        # 之前的代码是先发指令再单纯 sleep，现在建议直接等待 ACK
+        if not send_and_wait_ota(ser, frame, "OTA Start", timeout=8.0):
+            return
 
-        print(" 开始发送数据包...")
+        # 如果下位机是擦除完才回 ACK，这里其实不需要再 sleep 了
+        # 但为了保险（防止下位机还没准备好接收数据），保留 0.5s 缓冲
+        time.sleep(0.5)
+
+        # 3. 发送数据包
+        print("\n 开始发送数据包...")
         offset = 0
         total_chunks = (padded_len + CONFIG['OTA_PACKET_SIZE'] - 1) // CONFIG['OTA_PACKET_SIZE']
         chunk_idx = 0
 
         while offset < padded_len:
             chunk = firmware_data[offset: offset + CONFIG['OTA_PACKET_SIZE']]
+
+            # Payload: [Offset(4)] + [Len(2)] + [Data...]
             payload = struct.pack('>I', offset) + struct.pack('>H', len(chunk)) + chunk
             frame = build_frame(CONFIG['ADDR'], CMD_OTA_DATA, payload)
-            percent = (chunk_idx / total_chunks) * 100
-            if not send_and_wait_ota(ser, frame, f"Packet {chunk_idx + 1}/{total_chunks} ({percent:.1f}%)"):
+
+            percent = ((chunk_idx + 1) / total_chunks) * 100
+            if not send_and_wait_ota(ser, frame, f"Packet {chunk_idx + 1}/{total_chunks} ({percent:.1f}%)",
+                                     timeout=1.0):
                 print(f"\n 在 Offset {offset} 处中断")
                 return
+
             offset += len(chunk)
             chunk_idx += 1
 
-        print("\n 发送 OTA End 指令...")
-        payload = struct.pack('>I', padded_len)
+        # 4. 发送 OTA End (带 CRC32)
+        print("\n 发送 OTA End 指令 (校验中，请稍候)...")
+
+        # [修改] Payload: [TotalLen(4)] + [CRC32(4)]
+        # 对应 C 代码: rd_be32(rx_data) 和 rd_be32(rx_data + 4)
+        payload = struct.pack('>I', padded_len) + struct.pack('>I', firmware_crc32)
+
         frame = build_frame(CONFIG['ADDR'], CMD_OTA_END, payload)
-        send_and_wait_ota(ser, frame, "OTA End")
-        print("\n OTA 升级流程完成!")
+
+        # End 指令因为涉及到下位机回读 Flash 计算 CRC，速度取决于 Flash 大小
+        # 384KB 回读计算很快，但以防万一 timeout 给足 5秒
+        if send_and_wait_ota(ser, frame, "OTA End", timeout=5.0):
+            print("\n\n [成功] OTA 升级完成! 设备即将重启...")
+        else:
+            print("\n\n [失败] OTA 校验未通过 (Flash写入错误 或 传输错误)")
 
     except Exception as e:
         print(f"\n OTA 过程中出错: {e}")
+        import traceback
+        traceback.print_exc()
     finally:
         ser.close()
-
 
 # ==========================================
 # [菜单] 主程序

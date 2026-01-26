@@ -108,7 +108,7 @@ HAL_StatusTypeDef Flash_WriteConfig(uint8_t addr, uint16_t freq, uint16_t points
 }
 
 /* ---- 对外接口 4：更新 OTA 标志 (自动保留配置) ---- */
-HAL_StatusTypeDef Flash_SetOTAInfo(uint32_t flag, uint32_t len)
+HAL_StatusTypeDef Flash_SetOTAInfo(uint32_t flag, uint32_t len, uint32_t crc)
 {
     flash_dev_cfg_t cfg;
     
@@ -118,7 +118,8 @@ HAL_StatusTypeDef Flash_SetOTAInfo(uint32_t flag, uint32_t len)
     // 2. 修改 OTA 参数
     cfg.ota_flag = flag;
     cfg.fw_len   = len;
-
+		cfg.fw_crc   = crc; 
+	
     // 3. 擦除并写回
     return Flash_ProgramWholeConfig(&cfg);
 }
