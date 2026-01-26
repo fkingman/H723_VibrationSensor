@@ -104,13 +104,17 @@ targets:
       AC5:
         archExtensions: ""
         cpuType: Cortex-M7
-        floatingPointHardware: double
+        floatingPointHardware: single
         options:
           version: 4
           afterBuildTasks:
-            - name: new postbuild task
+            - name: "[Copy linker output for Keil User Commands]"
               abortAfterFailed: true
-              command: 'echo "firmware: ${OutDir}/${ProjectName}.hex"'
+              command: mkdir ${KEIL_OUTPUT_DIR} & copy "${OutDir}\${ProjectName}.axf" "${KEIL_OUTPUT_DIR}\${ProjectName}.axf"
+              disable: false
+            - name: fromelf.exe --bin -o "$L@L.bin" "#L"
+              abortAfterFailed: true
+              command: fromelf.exe --bin -o "${KEIL_OUTPUT_DIR}\${ProjectName}.bin" "${KEIL_OUTPUT_DIR}\${ProjectName}.axf"
               disable: false
           asm-compiler: {}
           beforeBuildTasks: []
@@ -120,15 +124,20 @@ targets:
             c99-mode: true
             gnu-extensions: true
             one-elf-section-per-function: true
-            optimization: level-0
+            optimization: level-3
             warnings: all-warnings
           global:
             output-debug-info: enable
+            use-microLIB: true
           linker:
+            $disableOutputTask: true
             $outputTaskExcludes:
               - .bin
             misc-controls: --remove
             output-format: elf
+            ro-base: ""
+            rw-base: ""
+            xo-base: ""
         scatterFilePath: ""
         storageLayout:
           RAM:

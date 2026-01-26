@@ -135,7 +135,7 @@ def task_scan_devices(timeout=5.0, silent=False):
             while True:
                 frame, rx_buffer = parse_packet_from_buffer(rx_buffer)
                 if frame:
-                    addr = frame[0]
+                    addr = frame[15]
                     uid_raw = frame[3:15]
                     uid_str = uid_raw.hex().upper()
 
@@ -410,7 +410,7 @@ def send_and_wait_ota(ser, frame, description, expected_len=7):
     start_time = time.time()
     received = b''
     while len(received) < expected_len:
-        if time.time() - start_time > 3.0: break
+        if time.time() - start_time > 5.0: break
         if ser.in_waiting:
             received += ser.read(ser.in_waiting)
 

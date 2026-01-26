@@ -1,12 +1,14 @@
 #include "Eigenvalue calculation.h"
 #include "arm_const_structs.h"
 #include <string.h>  //  memcpy
+#define MIN_VALID_PEAK_AMP  0.04f
 
 static arm_rfft_fast_instance_f32 S_rfft;
 static float32_t fftBuf[FFT_N_Z * 2]; // 复数运算缓冲区 (Z轴最长)
 
 float g_z_offset_g  = 0.0f;   // 0g 偏移
 float fr = 50;
+volatile uint8_t g_SnapshotReq = 0;       
 
 //#define CFFT (&arm_cfft_sR_f32_len1024)
 
@@ -22,6 +24,15 @@ void Calc_Init(void)
     arm_biquad_cascade_df1_init_f32(&IIR_HP,    1, (float32_t*)hp10HzCoeff,    hpState);
     arm_biquad_cascade_df1_init_f32(&IIR_NOTCH, 1, (float32_t*)notch50HzCoeff, notchState);
 }*/
+
+void Create_Wave_Snapshot(void)
+{
+    // 进入临界区，防止拷贝到一半被算法任务打断
+    //taskENTER_CRITICAL(); 
+    //memcpy(g_WaveZ_Tx, g_WaveZ_Live, sizeof(g_WaveZ_Live));
+    //taskEXIT_CRITICAL();
+    g_SnapshotReq = 1;
+}
 
 //私有函数
 static inline float Zcode_to_g(uint16_t code) 
@@ -221,6 +232,12 @@ void Calc_FreqDomain_Z(float32_t *data, uint32_t len, AxisFeatureValue *result)
         }
     }
     
+		if (maxAmp < MIN_VALID_PEAK_AMP) {
+        // 如果最大值都没超过门限，说明是静置噪音
+        result->peakFreq = 0.0f; // 强制置零
+        result->peakAmp  = 0.0f; // 或者保留 maxAmp 作为底噪参考，看你需求
+        result->amp2x    = 0.0f;
+		} else {
     float32_t freq_res = (float32_t)current_fs / (float32_t)len;
     float32_t peak_freq = (float32_t)maxIndex * freq_res;
 
@@ -229,11 +246,12 @@ void Calc_FreqDomain_Z(float32_t *data, uint32_t len, AxisFeatureValue *result)
     
     if (index_2x < len / 2) { 
         amp_2x = fftBuf[index_2x];
-    }
+			}
 
     result->peakFreq = peak_freq; 
     result->peakAmp  = maxAmp;    
     result->amp2x    = amp_2x;    
+		}
 }
 
 // 包络特征计算 (RFFT 优化版 - 修复输入被破坏 bug)
@@ -315,7 +333,12 @@ void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf)
         Integrate_Acc_To_Vel(fftBuf, FFT_N_XY);
         Calc_RMS_Only(fftBuf, FFT_N_XY, &Y_data); 
     }
-
+		if (g_SnapshotReq == 1) {
+					memset(Tx_Wave_Buffer_Z, 0, sizeof(Tx_Wave_Buffer_Z)); 
+			    memcpy(Tx_Wave_Buffer_Z, g_data_z, sizeof(Tx_Wave_Buffer_Z));
+		      g_SnapshotReq = 0; 
+		}
+		
     Calc_TimeDomain_Only(g_data_z, FFT_N_Z,  &Z_data);
 		memcpy(fftBuf, g_data_z, FFT_N_Z * sizeof(float));
     Calc_FreqDomain_Z(g_data_z, FFT_N_Z, &Z_data);

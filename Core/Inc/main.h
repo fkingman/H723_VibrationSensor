@@ -83,7 +83,9 @@ void Error_Handler(void);
 /* USER CODE BEGIN Private defines */
 #define FFT_N_Z        4096 			  									// 你需要采集的点数
 #define FFT_N_XY  		 4096  							// 你需要采集的点数
-//#define Z_Sample_freq  25598.36								// Z轴采集频率
+#define MAX_SAMPLE_FREQ_HZ   51200u  // 51.2kHz
+#define MIN_SAMPLE_FREQ_HZ   1024u   // 1kHz (保证4秒内能出结果)
+//#define Z_Sample_freq  25598.36								// Z轴采集频�?
 
 //#define ADC_Buffer_Z_ADDR      0x24000000
 //#define ADC_Buffer_XY_ADDR     0x24004000
@@ -119,7 +121,7 @@ extern uint8_t  rx_frame_buf[RX_FRAME_MAX];
 extern volatile uint16_t rx_frame_len;
 extern volatile uint8_t  rx_frame_ready;
 
-//本机信息结构�?
+//本机信息结构�??
 #define FLASH_CONFIG_ADDRESS 0x080E0000
 typedef struct {
     uint8_t device_address;  // 设备地址

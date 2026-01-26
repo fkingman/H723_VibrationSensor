@@ -47,6 +47,7 @@ typedef struct
 } AxisFeatureValue;
 extern AxisFeatureValue X_data,Y_data,Z_data;
 extern float g_z_offset_g;
+extern volatile uint8_t g_SnapshotReq;    
 
 void Calc_Init(void);// 用于在上电时调用一次，负责 FFT 表初始化和滤波器初始化
 void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf);
@@ -59,6 +60,7 @@ void Z_Calib_Z_Upright_Neg1G(float *gBuf, uint32_t N);
 float Tempetature_Dis(void);
 void print_g_data(float *buf, uint32_t N);
 void print_FEATURE();
+void Create_Wave_Snapshot(void);
 
 															
 
