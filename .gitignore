@@ -18,7 +18,12 @@ JLinkLog.txt
 *.bak
 RTE/
 
+
 # Objects and Listings folders
 Objects/
 Listings/
 DebugConfig/
+
+*.csv
+*.png
+*.py
