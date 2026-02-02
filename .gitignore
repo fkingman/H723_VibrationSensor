@@ -23,7 +23,4 @@ RTE/
 Objects/
 Listings/
 DebugConfig/
-
-*.csv
-*.png
-*.py
+Protocol_Test/

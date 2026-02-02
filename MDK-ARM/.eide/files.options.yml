@@ -18,4 +18,6 @@ options:
     H723_VibrationSensor:
         files: {}
         virtualPathFiles:
+            <virtual_root>/Application/User/Core/iwdg.c: ""
             <virtual_root>/Application/User/Core/tim.c: ""
+            <virtual_root>/Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_iwdg.c: ""
