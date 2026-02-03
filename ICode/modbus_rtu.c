@@ -4,6 +4,8 @@
 #include "tim.h"
 
 #define RX_MIN_LEN     7          /* Head(2)+Dev(1)+Cmd(1)+Ch(1)+Chk(1)+Foot(2) */
+#define MAX_SAMPLE_FREQ_HZ   51200u  // 51.2kHz
+#define MIN_SAMPLE_FREQ_HZ   1024u   // 1kHz (保证4秒内能出结果)
 
 extern float zBuf[FFT_N_Z];
 extern uint16_t g_cfg_freq_hz;
@@ -344,7 +346,7 @@ static bool HandleSetAddr_Broadcast(const uint8_t* rx, uint16_t flen)
 /**********************************解析配置帧**********************************/
 static void Config_ParseAndApply_Freq(const uint8_t* rx)
 {
-		uint16_t f = rd_be16(&rx[2]);        // dev|cmd 之后 2 字节
+		uint16_t f = rd_be16(&rx[3]);        // dev|cmd cnt之后 2 字节
 		if (f < MIN_SAMPLE_FREQ_HZ || f > MAX_SAMPLE_FREQ_HZ) {
         return; 
     }
@@ -352,6 +354,8 @@ static void Config_ParseAndApply_Freq(const uint8_t* rx)
     if (Flash_UpdateFreq(f) == HAL_OK) 
 		{
         g_cfg_freq_hz = f;
+				Algo_Update_LPF_Coeff(g_cfg_freq_hz);
+				Algo_Update_HPF_Coeff(g_cfg_freq_hz);
         ACQ_SetFreqHz(g_cfg_freq_hz);
     }
 }

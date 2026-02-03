@@ -52,7 +52,8 @@ extern volatile uint8_t g_SnapshotReq;
 void Calc_Init(void);// 用于在上电时调用一次，负责 FFT 表初始化和滤波器初始化
 void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf);
 void Eigen_Separate_And_Convert(uint16_t *pZBuf, uint16_t *pXYBuf);//转g
-
+void Algo_Update_LPF_Coeff(uint16_t sample_rate_hz);
+void Algo_Update_HPF_Coeff(uint16_t sample_rate_hz);
 //void Calc_TimeDomain_Only(float32_t *data, uint32_t len, AxisFeatureValue *result);
 //void Calc_FreqDomain_Z(float32_t *data, uint32_t len);
 //void Calc_Envelope_Z(float32_t *data, uint32_t len);

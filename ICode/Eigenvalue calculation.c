@@ -2,12 +2,14 @@
 #include "arm_const_structs.h"
 #include <string.h>  //  memcpy
 #define MIN_VALID_PEAK_AMP  0.04f
+#define INT_ACC_DEADZONE  0.00f	//噪声积分门限
+static float g_hpf_alpha = 0.99f; // 高通系数
+static float g_lpf_alpha = 0.8f; // 低通系数
 
 static arm_rfft_fast_instance_f32 S_rfft;
 static float32_t fftBuf[FFT_N_Z * 2]; // 复数运算缓冲区 (Z轴最长)
 
 float g_z_offset_g  = 0.0f;   // 0g 偏移
-float fr = 50;
 volatile uint8_t g_SnapshotReq = 0;       
 
 //#define CFFT (&arm_cfft_sR_f32_len1024)
@@ -17,6 +19,8 @@ void Calc_Init(void)
 {
     arm_rfft_fast_init_f32(&S_rfft, FFT_N_Z);      // 初始化 FFT 结构体   
     //Vib_Filter_Init();     // 初始化滤波器
+		Algo_Update_LPF_Coeff(g_cfg_freq_hz);
+		Algo_Update_HPF_Coeff(g_cfg_freq_hz); // 10Hz 高通
 }
 
 /*void Vib_Filter_Init(void)
@@ -90,6 +94,126 @@ void Z_Calib_Z_Upright_Neg1G(float *gBuf, uint32_t N)
   
     g_z_offset_g += (mean_current - target_g);
 }
+
+//中值滤波
+static void Apply_Median_Filter_3(float *data, uint32_t len)
+{
+    // 只处理中间部分
+
+    float prev = data[0];
+    float curr = data[1];
+    float next;
+    
+    for(uint32_t i = 1; i < len - 1; i++)
+    {
+        next = data[i+1]; // 预读取下一个点
+        
+        // 核心逻辑：找 prev, curr, next 三者中的中间值
+        float median;
+        
+        if (prev > curr) {
+            if (curr > next) {
+                median = curr;      // prev > curr > next
+            } else if (prev > next) {
+                median = next;      // prev > next > curr
+            } else {
+                median = prev;      // next > prev > curr
+            }
+        } else { // curr >= prev
+            if (curr < next) {
+                median = curr;      // next > curr >= prev
+            } else if (prev < next) {
+                median = next;      // curr >= next > prev
+            } else {
+                median = prev;      // curr >= prev >= next
+            }
+        }
+        
+        // 更新当前点
+        data[i] = median;
+                
+        prev = data[i]; // 使用滤波后的值作为下一轮的 prev (IIR特性，去噪更强)
+        curr = next;    // 加载新的 curr
+    }
+}
+
+//低通系数更新
+void Algo_Update_LPF_Coeff(uint16_t sample_rate_hz)
+{
+    // 目标截止频率: 1000Hz
+    const float cut_off_freq = 1000.0f;
+    const float pi_2 = 6.2831853f; // 2 * Pi
+    
+    if (sample_rate_hz == 0) return; // 防止除零
+
+    // 公式: alpha = Fs / (Fs + 2*pi*Fc)
+    float denom = (float)sample_rate_hz + (pi_2 * cut_off_freq);
+    g_lpf_alpha = (float)sample_rate_hz / denom;
+    
+}
+
+// 1kHz 低通滤波器
+static void LowPassFilter_1kHz(float *data, uint32_t len)
+{
+    // 初始化：用第0个点作为初始状态，避免滤波器启动时的跳变
+    float val_prev = data[0]; 
+    
+    for (uint32_t i = 1; i < len; i++)
+    {
+        float val_curr = data[i];
+        
+        // 核心公式：输出 = (系数 * 上一次输出) + ((1-系数) * 本次输入)
+        // 这里的 LPF_ALPHA (0.8) 代表“惯性”，即 80% 保持原样，只接受 20% 的新变化
+        float val_out = g_lpf_alpha * val_prev + (1.0f - g_lpf_alpha) * val_curr;
+        
+        // 更新数据：原地覆盖，节省内存
+        data[i] = val_out;
+        
+        // 保存当前输出供下一次迭代使用
+        val_prev = val_out;
+    }
+}
+//高通系数更新
+void Algo_Update_HPF_Coeff(uint16_t sample_rate_hz)
+{
+    const float cut_off_freq = 10.0f;
+    const float pi_2 = 6.2831853f; 
+
+    if (sample_rate_hz == 0) return;
+
+    // Alpha = RC / (RC + dt)
+    // RC = 1 / (2 * pi * fc)
+    // dt = 1 / Fs
+    // Alpha = Fs / (Fs + 2*pi*fc)
+    
+    float denom = (float)sample_rate_hz + (pi_2 * cut_off_freq);
+    g_hpf_alpha = (float)sample_rate_hz / denom;
+    
+}
+//10hz高通
+static void HighPassFilter_10Hz(float *data, uint32_t len)
+{
+    float alpha = g_hpf_alpha; // 使用动态计算的系数
+    float last_in = data[0];
+    float last_out = 0.0f; // 初始状态假设为0 (去直流后通常接近0)
+    
+    // 首点处理：简单置零或设为 data[0] 去直流
+    data[0] = 0.0f; 
+    
+    for(uint32_t i = 1; i < len; i++) {
+        float input = data[i];
+        
+        // 核心差分公式
+        // 理解：(input - last_in) 是信号的变化量
+        float output = alpha * (last_out + input - last_in);
+        
+        data[i] = output; // 原地更新
+        
+        last_out = output;
+        last_in = input;
+    }
+}
+
 /*
 static inline CFFT_PTR_T pick_cfft_u32(uint32_t N)
 {
@@ -160,10 +284,14 @@ static void Integrate_Acc_To_Vel(float *data, uint32_t len)
     
     // 重力加速度常数: 1g ≈ 9806.65 mm/s²
     const float G_TO_MM_S2 = 9806.65f; 
-
+	
     for (uint32_t i = 0; i < len; i++) {
         float val_curr = data[i];
         
+				if (fabsf(val_curr) < INT_ACC_DEADZONE) { //噪声积分门限
+            val_curr = 0.0f;
+        }
+				
         // 梯形积分公式
         vel += (val_prev + val_curr) * 0.5f * dt * G_TO_MM_S2;
         val_prev = val_curr;
@@ -244,9 +372,15 @@ void Calc_FreqDomain_Z(float32_t *data, uint32_t len, AxisFeatureValue *result)
     float32_t amp_2x = 0.0f;
     uint32_t index_2x = maxIndex * 2;
     
-    if (index_2x < len / 2) { 
-        amp_2x = fftBuf[index_2x];
-			}
+		if (index_2x > 1 && index_2x < (len/2 - 1)) {
+				float32_t a = data[index_2x - 1];
+				float32_t b = data[index_2x];
+				float32_t c = data[index_2x + 1];
+				// 取三者最大
+				amp_2x = (a > b) ? ((a > c) ? a : c) : ((b > c) ? b : c);
+		} else if (index_2x < len/2) {
+				amp_2x = data[index_2x];
+		}
 
     result->peakFreq = peak_freq; 
     result->peakAmp  = maxAmp;    
@@ -318,21 +452,27 @@ void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf)
 {	  
     Eigen_Separate_And_Convert(pZBuf, pXYBuf);
 
+		Apply_Median_Filter_3(g_data_x, FFT_N_XY); // 去除尖峰毛刺 (修复峭度偏高)
+    HighPassFilter_10Hz(g_data_x, FFT_N_XY);   // 去除重力和零漂 (修复 Mean 偏置)
+    LowPassFilter_1kHz(g_data_x, FFT_N_XY);    // 压制高频底噪 (降低 P-P 值)
     Calc_TimeDomain_Only(g_data_x, FFT_N_XY, &X_data);
     if (FFT_N_XY <= FFT_N_Z * 2) { 
         memcpy(fftBuf, g_data_x, FFT_N_XY * sizeof(float)); 
-        Remove_DC(fftBuf, FFT_N_XY);       
-        Integrate_Acc_To_Vel(fftBuf, FFT_N_XY); 
+        Integrate_Acc_To_Vel(fftBuf, FFT_N_XY); //内部去直流
         Calc_RMS_Only(fftBuf, FFT_N_XY, &X_data); 
     }
-
+		
+		Apply_Median_Filter_3(g_data_y, FFT_N_XY); // 去毛刺
+    HighPassFilter_10Hz(g_data_y, FFT_N_XY);   // 去直流
+    LowPassFilter_1kHz(g_data_y, FFT_N_XY);    // 去噪
     Calc_TimeDomain_Only(g_data_y, FFT_N_XY, &Y_data);
     if (FFT_N_XY <= FFT_N_Z * 2) {
         memcpy(fftBuf, g_data_y, FFT_N_XY * sizeof(float));
-        Remove_DC(fftBuf, FFT_N_XY);
         Integrate_Acc_To_Vel(fftBuf, FFT_N_XY);
         Calc_RMS_Only(fftBuf, FFT_N_XY, &Y_data); 
     }
+		
+		HighPassFilter_10Hz(g_data_z, FFT_N_Z);
 		if (g_SnapshotReq == 1) {
 					memset(Tx_Wave_Buffer_Z, 0, sizeof(Tx_Wave_Buffer_Z)); 
 			    memcpy(Tx_Wave_Buffer_Z, g_data_z, sizeof(Tx_Wave_Buffer_Z));
@@ -340,13 +480,12 @@ void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf)
 		}
 		
     Calc_TimeDomain_Only(g_data_z, FFT_N_Z,  &Z_data);
-		memcpy(fftBuf, g_data_z, FFT_N_Z * sizeof(float));
     Calc_FreqDomain_Z(g_data_z, FFT_N_Z, &Z_data);
     Calc_Envelope_Z(g_data_z, FFT_N_Z, &Z_data);
     memcpy(fftBuf, g_data_z, FFT_N_Z * sizeof(float));
-    Remove_DC(fftBuf, FFT_N_Z);
+		LowPassFilter_1kHz(fftBuf, FFT_N_Z);
     Integrate_Acc_To_Vel(fftBuf, FFT_N_Z);
-    Calc_RMS_Only(fftBuf, FFT_N_XY, &Z_data);
+    Calc_RMS_Only(fftBuf, FFT_N_Z, &Z_data);
 
 }
 
