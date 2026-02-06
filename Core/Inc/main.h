@@ -83,7 +83,8 @@ void Error_Handler(void);
 /* USER CODE BEGIN Private defines */
 #define FFT_N_Z        4096 			  									// 你需要采集的点数
 #define FFT_N_XY  		 4096  							// 你需要采集的点数
-
+#define LONG_WAVE_LEN  FFT_N_Z * LONG_WAVE_PKT
+#define LONG_WAVE_PKT  6
 //#define Z_Sample_freq  25598.36								// Z轴采集频�?
 
 //#define ADC_Buffer_Z_ADDR      0x24000000
@@ -96,7 +97,7 @@ void Error_Handler(void);
 	
 extern uint16_t ADC_Buffer_Z[FFT_N_Z * 2];     
 extern uint16_t ADC_Buffer_XY[FFT_N_XY * 2 * 2];
-extern float Tx_Wave_Buffer_Z[FFT_N_Z];
+extern float Tx_Wave_Buffer_Z[LONG_WAVE_LEN];
 extern uint16_t Process_Buffer_Z[FFT_N_Z];
 extern uint16_t Process_Buffer_XY[FFT_N_XY * 2];
 
@@ -107,8 +108,8 @@ extern float32_t g_data_z[FFT_N_Z];
 extern float Temp; 
 extern uint16_t g_cfg_freq_hz;
 //dma和modbus的缓冲区,串口3
-#define RX_DMA_BUF_SZ   512
-#define RX_FRAME_MAX    512
+#define RX_DMA_BUF_SZ   2048
+#define RX_FRAME_MAX    2048
 
 //#define RX_DMA_BUF_ADDR     0x24010000
 //#define RX_FRAME_BUF_ADDR   0x24010200

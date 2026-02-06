@@ -11,6 +11,7 @@ extern float zBuf[FFT_N_Z];
 extern uint16_t g_cfg_freq_hz;
 extern uint16_t g_cfg_points;
 extern uint16_t wave_points;   // 波形发送
+extern uint8_t g_modbus_tx_buf[2048];
 
 extern float* getZBuf(void);
 
@@ -196,21 +197,20 @@ static void send_wave_ack(uint8_t dev_id)
 }
 
 /* ---- 协议常量 ---- */
-enum { PTS_PER_PKT   = 64 };                     // 每包 64 点
+enum { PTS_PER_PKT   = 384 };                     // 每包 384 点
 enum { HEADER_NOCRC  = 4  };                     // dev_id(1) + CMD_WAVE(1) + seq(1) + total_pkts(1) 
-enum { DATA_LEN      = PTS_PER_PKT * 4 };        // 64 * 4 = 256
-enum { FRAME_NOCRC   = HEADER_NOCRC + DATA_LEN };// 4 + 256 = 260
+enum { DATA_LEN      = PTS_PER_PKT * 4 };        // 384 * 4 = 1536
+enum { FRAME_NOCRC   = HEADER_NOCRC + DATA_LEN };// 4 + 1536 = 1540
 enum { CRC_LEN       = 2  };
-enum { FRAME_LEN     = FRAME_NOCRC + CRC_LEN };  // 260 + 2 = 262
+enum { FRAME_LEN     = FRAME_NOCRC + CRC_LEN };  // 1540 + 2 = 1542
 
 /* 帧：dev_id | CMD_WAVE  | seq(1B) |total_pkts(1B) | 64×float(BE) | CRC(LE) */
 static void send_wave_pkt(uint8_t dev_id, const float *buf, uint8_t seq, uint8_t total_pkts)
 {
     if (!buf) return;
 
-    static uint8_t tx[FRAME_LEN]; // FRAME_LEN = 262
-
-		uint8_t *p = tx;
+    uint8_t *p = g_modbus_tx_buf;
+		memset(g_modbus_tx_buf, 0, FRAME_LEN);
 		uint32_t offset = (uint32_t)seq * PTS_PER_PKT; 
 	
 		/* 头部 4B */
@@ -226,12 +226,13 @@ static void send_wave_pkt(uint8_t dev_id, const float *buf, uint8_t seq, uint8_t
         put_be_f32(&p, v); // 大端模式写入
     }
 
-		uint16_t crc = Modbus_CRC16(tx, (size_t)(p - tx));
-		*p++ = (uint8_t)(crc & 0xFF);        // Low
-		*p++ = (uint8_t)((crc >> 8) & 0xFF); // High
+		uint16_t len = (uint16_t)(p - g_modbus_tx_buf);
+    uint16_t crc = Modbus_CRC16(g_modbus_tx_buf, len);
+    *p++ = (uint8_t)(crc & 0xFF);       
+    *p++ = (uint8_t)((crc >> 8) & 0xFF);
 
 //		HAL_UART_Transmit_DMA(&huart3, tx, (uint16_t)(p - tx));
-		uart3_send_dma(tx, (uint16_t)(p - tx));	
+		uart3_send_dma(g_modbus_tx_buf, (uint16_t)(p - g_modbus_tx_buf));
 }
 
 /**********************************广播发现应答**********************************/
@@ -360,7 +361,7 @@ static void Config_ParseAndApply_Freq(const uint8_t* rx)
     }
 }
 
-static void Config_ParseAndApply_Point(const uint8_t* rx)
+/*static void Config_ParseAndApply_Point(const uint8_t* rx)
 {
 		uint16_t pts = rd_be16(&rx[3]);     // dev|cmd|sub 之后 2 字节
     if (pts == 0) return;
@@ -372,14 +373,13 @@ static void Config_ParseAndApply_Point(const uint8_t* rx)
         wave_points  = pts;            
     }
 }
-/**********************************采样配置应答**********************************/
 static void Config_SendAck(uint8_t dev_id)
 {
-    static uint8_t tx[3 + 2 + 2 + 2];      // dev|cmd|len|freq2|points2|crc2
+    static uint8_t tx[3 + 2 + 2 + 2];      // dev|cmd|len|freq2|crc2
     uint8_t *p = tx;
 
     *p++ = dev_id;
-    *p++ = CMD_CONFIG;              // 0x00（你头文件里的定义）
+    *p++ = CMD_CONFIG;              
     *p++ = 4;                       // payload 长度
 
 	  uint16_t freq16 = (uint16_t)g_cfg_freq_hz;
@@ -394,7 +394,8 @@ static void Config_SendAck(uint8_t dev_id)
 
 //		HAL_UART_Transmit_DMA(&huart3, tx, (uint16_t)(p - tx));
 		uart3_send_dma(tx, (uint16_t)(p - tx));	
-}
+}*/
+/**********************************采样配置应答**********************************/
 static void Cfg_SendAck(uint8_t dev_id)
 {
     static uint8_t tx[5 + 2];      

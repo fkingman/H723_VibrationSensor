@@ -10,9 +10,9 @@ static arm_rfft_fast_instance_f32 S_rfft;
 static float32_t fftBuf[FFT_N_Z * 2]; // 复数运算缓冲区 (Z轴最长)
 
 float g_z_offset_g  = 0.0f;   // 0g 偏移
-volatile uint8_t g_SnapshotReq = 0;       
 
-//#define CFFT (&arm_cfft_sR_f32_len1024)
+volatile uint8_t g_LongCaptureState = 0; // 0:空闲, 1:录制中, 2:录制完成
+volatile uint8_t g_CaptureIndex = 0; // 当前段
 
 //计算初始化函数
 void Calc_Init(void)
@@ -35,7 +35,8 @@ void Create_Wave_Snapshot(void)
     //taskENTER_CRITICAL(); 
     //memcpy(g_WaveZ_Tx, g_WaveZ_Live, sizeof(g_WaveZ_Live));
     //taskEXIT_CRITICAL();
-    g_SnapshotReq = 1;
+    g_CaptureIndex = 0;
+    g_LongCaptureState = 1;
 }
 
 //私有函数
@@ -452,7 +453,7 @@ void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf)
 {	  
     Eigen_Separate_And_Convert(pZBuf, pXYBuf);
 
-		Apply_Median_Filter_3(g_data_x, FFT_N_XY); // 去除尖峰毛刺 (修复峭度偏高)
+	Apply_Median_Filter_3(g_data_x, FFT_N_XY); // 去除尖峰毛刺 (修复峭度偏高)
     HighPassFilter_10Hz(g_data_x, FFT_N_XY);   // 去除重力和零漂 (修复 Mean 偏置)
     LowPassFilter_1kHz(g_data_x, FFT_N_XY);    // 压制高频底噪 (降低 P-P 值)
     Calc_TimeDomain_Only(g_data_x, FFT_N_XY, &X_data);
@@ -462,7 +463,7 @@ void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf)
         Calc_RMS_Only(fftBuf, FFT_N_XY, &X_data); 
     }
 		
-		Apply_Median_Filter_3(g_data_y, FFT_N_XY); // 去毛刺
+	Apply_Median_Filter_3(g_data_y, FFT_N_XY); // 去毛刺
     HighPassFilter_10Hz(g_data_y, FFT_N_XY);   // 去直流
     LowPassFilter_1kHz(g_data_y, FFT_N_XY);    // 去噪
     Calc_TimeDomain_Only(g_data_y, FFT_N_XY, &Y_data);
@@ -472,18 +473,24 @@ void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf)
         Calc_RMS_Only(fftBuf, FFT_N_XY, &Y_data); 
     }
 		
-		HighPassFilter_10Hz(g_data_z, FFT_N_Z);
-		if (g_SnapshotReq == 1) {
-					memset(Tx_Wave_Buffer_Z, 0, sizeof(Tx_Wave_Buffer_Z)); 
-			    memcpy(Tx_Wave_Buffer_Z, g_data_z, sizeof(Tx_Wave_Buffer_Z));
-		      g_SnapshotReq = 0; 
-		}
-		
+    if (g_LongCaptureState == 1) {
+        uint32_t offset = g_CaptureIndex * FFT_N_Z;
+        memcpy(&Tx_Wave_Buffer_Z[offset], g_data_z, FFT_N_Z * sizeof(float));
+        g_CaptureIndex++;
+        if (g_CaptureIndex >= LONG_WAVE_PKT) 
+        {
+            g_CaptureIndex = 0;
+            HighPassFilter_10Hz(Tx_Wave_Buffer_Z, LONG_WAVE_LEN);
+					   g_LongCaptureState = 0; 
+        }
+    }
+	
+    HighPassFilter_10Hz(g_data_z, FFT_N_Z);
     Calc_TimeDomain_Only(g_data_z, FFT_N_Z,  &Z_data);
     Calc_FreqDomain_Z(g_data_z, FFT_N_Z, &Z_data);
     Calc_Envelope_Z(g_data_z, FFT_N_Z, &Z_data);
     memcpy(fftBuf, g_data_z, FFT_N_Z * sizeof(float));
-		LowPassFilter_1kHz(fftBuf, FFT_N_Z);
+	LowPassFilter_1kHz(fftBuf, FFT_N_Z);
     Integrate_Acc_To_Vel(fftBuf, FFT_N_Z);
     Calc_RMS_Only(fftBuf, FFT_N_Z, &Z_data);
 
