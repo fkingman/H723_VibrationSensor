@@ -14,6 +14,26 @@ float g_z_offset_g  = 0.0f;   // 0g 偏移
 volatile uint8_t g_LongCaptureState = 0; // 0:空闲, 1:录制中, 2:录制完成
 volatile uint8_t g_CaptureIndex = 0; // 当前段
 
+
+// 定义高低通状态结构体
+typedef struct {
+    float last_in;
+    float last_out;
+} HPF_State_t;
+
+typedef struct {
+    float last_out;
+} LPF_State_t;
+
+// 三轴独立状态（必须分开，否则互相干扰）
+static HPF_State_t hpf_state_x = {0.0f, 0.0f};
+static HPF_State_t hpf_state_y = {0.0f, 0.0f};
+static HPF_State_t hpf_state_z = {0.0f, 0.0f};
+
+static LPF_State_t lpf_state_x = {0.0f};
+static LPF_State_t lpf_state_y = {0.0f};
+static LPF_State_t lpf_state_z = {0.0f};
+
 //计算初始化函数
 void Calc_Init(void)
 {
@@ -153,27 +173,22 @@ void Algo_Update_LPF_Coeff(uint16_t sample_rate_hz)
     
 }
 
-// 1kHz 低通滤波器
-static void LowPassFilter_1kHz(float *data, uint32_t len)
+// 1kHz 低通滤波器（带连续记忆）
+static void LowPassFilter_1kHz(float *data, uint32_t len, LPF_State_t *state)
 {
-    // 初始化：用第0个点作为初始状态，避免滤波器启动时的跳变
-    float val_prev = data[0]; 
+    float val_prev = state->last_out; 
     
-    for (uint32_t i = 1; i < len; i++)
+    for (uint32_t i = 0; i < len; i++)
     {
         float val_curr = data[i];
-        
-        // 核心公式：输出 = (系数 * 上一次输出) + ((1-系数) * 本次输入)
-        // 这里的 LPF_ALPHA (0.8) 代表“惯性”，即 80% 保持原样，只接受 20% 的新变化
         float val_out = g_lpf_alpha * val_prev + (1.0f - g_lpf_alpha) * val_curr;
-        
-        // 更新数据：原地覆盖，节省内存
         data[i] = val_out;
-        
-        // 保存当前输出供下一次迭代使用
         val_prev = val_out;
     }
+    
+    state->last_out = val_prev;
 }
+
 //高通系数更新
 void Algo_Update_HPF_Coeff(uint16_t sample_rate_hz)
 {
@@ -191,28 +206,24 @@ void Algo_Update_HPF_Coeff(uint16_t sample_rate_hz)
     g_hpf_alpha = (float)sample_rate_hz / denom;
     
 }
-//10hz高通
-static void HighPassFilter_10Hz(float *data, uint32_t len)
+// 10Hz 高通滤波器（带连续记忆）
+static void HighPassFilter_10Hz(float *data, uint32_t len, HPF_State_t *state)
 {
-    float alpha = g_hpf_alpha; // 使用动态计算的系数
-    float last_in = data[0];
-    float last_out = 0.0f; // 初始状态假设为0 (去直流后通常接近0)
+    float alpha = g_hpf_alpha; 
+    float last_in = state->last_in;
+    float last_out = state->last_out; 
     
-    // 首点处理：简单置零或设为 data[0] 去直流
-    data[0] = 0.0f; 
-    
-    for(uint32_t i = 1; i < len; i++) {
+    for(uint32_t i = 0; i < len; i++) {
         float input = data[i];
-        
-        // 核心差分公式
-        // 理解：(input - last_in) 是信号的变化量
         float output = alpha * (last_out + input - last_in);
-        
-        data[i] = output; // 原地更新
-        
+        data[i] = output; 
         last_out = output;
         last_in = input;
     }
+    
+    // 保存状态供下一帧使用
+    state->last_in = last_in;
+    state->last_out = last_out;
 }
 
 /*
@@ -453,9 +464,9 @@ void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf)
 {	  
     Eigen_Separate_And_Convert(pZBuf, pXYBuf);
 
-	Apply_Median_Filter_3(g_data_x, FFT_N_XY); // 去除尖峰毛刺 (修复峭度偏高)
-    HighPassFilter_10Hz(g_data_x, FFT_N_XY);   // 去除重力和零漂 (修复 Mean 偏置)
-    LowPassFilter_1kHz(g_data_x, FFT_N_XY);    // 压制高频底噪 (降低 P-P 值)
+		Apply_Median_Filter_3(g_data_x, FFT_N_XY); // 去除尖峰毛刺 (修复峭度偏高)
+		HighPassFilter_10Hz(g_data_x, FFT_N_XY, &hpf_state_x); // 传入状态
+		LowPassFilter_1kHz(g_data_x, FFT_N_XY, &lpf_state_x);  // 传入状态
     Calc_TimeDomain_Only(g_data_x, FFT_N_XY, &X_data);
     if (FFT_N_XY <= FFT_N_Z * 2) { 
         memcpy(fftBuf, g_data_x, FFT_N_XY * sizeof(float)); 
@@ -463,9 +474,9 @@ void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf)
         Calc_RMS_Only(fftBuf, FFT_N_XY, &X_data); 
     }
 		
-	Apply_Median_Filter_3(g_data_y, FFT_N_XY); // 去毛刺
-    HighPassFilter_10Hz(g_data_y, FFT_N_XY);   // 去直流
-    LowPassFilter_1kHz(g_data_y, FFT_N_XY);    // 去噪
+		Apply_Median_Filter_3(g_data_y, FFT_N_XY); // 去毛刺
+    HighPassFilter_10Hz(g_data_y, FFT_N_XY, &hpf_state_y);   // 去直流
+    LowPassFilter_1kHz(g_data_y, FFT_N_XY, &lpf_state_y);    // 去噪
     Calc_TimeDomain_Only(g_data_y, FFT_N_XY, &Y_data);
     if (FFT_N_XY <= FFT_N_Z * 2) {
         memcpy(fftBuf, g_data_y, FFT_N_XY * sizeof(float));
@@ -480,17 +491,17 @@ void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf)
         if (g_CaptureIndex >= LONG_WAVE_PKT) 
         {
             g_CaptureIndex = 0;
-            HighPassFilter_10Hz(Tx_Wave_Buffer_Z, LONG_WAVE_LEN);
+							//HighPassFilter_10Hz(g_data_z, FFT_N_Z, &hpf_state_z);
 					   g_LongCaptureState = 0; 
         }
     }
 	
-    HighPassFilter_10Hz(g_data_z, FFT_N_Z);
+    HighPassFilter_10Hz(g_data_z, FFT_N_Z, &hpf_state_z);
     Calc_TimeDomain_Only(g_data_z, FFT_N_Z,  &Z_data);
     Calc_FreqDomain_Z(g_data_z, FFT_N_Z, &Z_data);
     Calc_Envelope_Z(g_data_z, FFT_N_Z, &Z_data);
     memcpy(fftBuf, g_data_z, FFT_N_Z * sizeof(float));
-	LowPassFilter_1kHz(fftBuf, FFT_N_Z);
+		LowPassFilter_1kHz(fftBuf, FFT_N_Z, &lpf_state_z);
     Integrate_Acc_To_Vel(fftBuf, FFT_N_Z);
     Calc_RMS_Only(fftBuf, FFT_N_Z, &Z_data);
 

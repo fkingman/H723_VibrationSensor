@@ -118,7 +118,8 @@ targets:
               abortAfterFailed: true
               command: fromelf.exe --bin -o "${KEIL_OUTPUT_DIR}\${ProjectName}.bin" "${KEIL_OUTPUT_DIR}\${ProjectName}.axf"
               disable: false
-          asm-compiler: {}
+          asm-compiler:
+            defines: []
           beforeBuildTasks: []
           c/cpp-compiler:
             CXX_FLAGS: --diag_suppress=1 --diag_suppress=1295
