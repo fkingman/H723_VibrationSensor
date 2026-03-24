@@ -197,12 +197,12 @@ static void send_wave_ack(uint8_t dev_id)
 }
 
 /* ---- 协议常量 ---- */
-enum { PTS_PER_PKT   = 384 };                     // 每包 384 点
+enum { PTS_PER_PKT   = 64 };                     // 每包 64 点
 enum { HEADER_NOCRC  = 4  };                     // dev_id(1) + CMD_WAVE(1) + seq(1) + total_pkts(1) 
-enum { DATA_LEN      = PTS_PER_PKT * 4 };        // 384 * 4 = 1536
-enum { FRAME_NOCRC   = HEADER_NOCRC + DATA_LEN };// 4 + 1536 = 1540
+enum { DATA_LEN      = PTS_PER_PKT * 4 };        // 64 * 4 = 256
+enum { FRAME_NOCRC   = HEADER_NOCRC + DATA_LEN };// 4 + 256 = 260
 enum { CRC_LEN       = 2  };
-enum { FRAME_LEN     = FRAME_NOCRC + CRC_LEN };  // 1540 + 2 = 1542
+enum { FRAME_LEN     = FRAME_NOCRC + CRC_LEN };  // 260 + 2 = 262
 
 /* 帧：dev_id | CMD_WAVE  | seq(1B) |total_pkts(1B) | 64×float(BE) | CRC(LE) */
 static void send_wave_pkt(uint8_t dev_id, const float *buf, uint8_t seq, uint8_t total_pkts)
@@ -215,7 +215,7 @@ static void send_wave_pkt(uint8_t dev_id, const float *buf, uint8_t seq, uint8_t
 	
 		/* 头部 4B */
 		*p++ = dev_id;        // 1B
-		*p++ = CMD_WAVE_PACK;      // 1B
+		*p++ = CMD_WAVE_PACK; // 1B
 		*p++ = seq;           // 1B，当前序号
 		*p++ = total_pkts;    // 1B，总包数
 
