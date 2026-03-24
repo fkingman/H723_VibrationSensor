@@ -611,7 +611,12 @@ void Protocol_HandleRxFrame(const uint8_t *rx, uint16_t len, uint8_t local_addre
         HandleSetAddr_Broadcast(rx, len);
 				return;
     }
-				
+		
+		if (is_broadcast && cmd == CMD_REBOOT) {
+        HAL_Delay(100);
+				HAL_NVIC_SystemReset();
+    }
+		
 		if (!is_broadcast && dev_id != local_address) 
 		{
         return;
@@ -627,7 +632,6 @@ void Protocol_HandleRxFrame(const uint8_t *rx, uint16_t len, uint8_t local_addre
 		case CMD_OTA_START:	Handle_OTA_Start(dev_id, &rx[2]);break;
 		case CMD_OTA_DATA:Handle_OTA_Data(dev_id, &rx[2], len - 4);break;
 		case CMD_OTA_END:	Handle_OTA_End(dev_id, &rx[2]);break;
-		case CMD_REBOOT:HAL_Delay(100);HAL_NVIC_SystemReset();break;
 		default:
 //        Protocol_SendNack(dev_id, cmd, PKT_ERR_CMD);            
         break;
