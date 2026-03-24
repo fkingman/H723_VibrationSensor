@@ -616,7 +616,7 @@ void Protocol_HandleRxFrame(const uint8_t *rx, uint16_t len, uint8_t local_addre
 		{
         return;
     }
-				
+								
     switch (cmd)
     {
     case CMD_FEATURE: send_feature_pkt(dev_id, &X_data, &Y_data, &Z_data, Temp); break;
@@ -627,6 +627,7 @@ void Protocol_HandleRxFrame(const uint8_t *rx, uint16_t len, uint8_t local_addre
 		case CMD_OTA_START:	Handle_OTA_Start(dev_id, &rx[2]);break;
 		case CMD_OTA_DATA:Handle_OTA_Data(dev_id, &rx[2], len - 4);break;
 		case CMD_OTA_END:	Handle_OTA_End(dev_id, &rx[2]);break;
+		case CMD_REBOOT:HAL_Delay(100);HAL_NVIC_SystemReset();break;
 		default:
 //        Protocol_SendNack(dev_id, cmd, PKT_ERR_CMD);            
         break;

@@ -25,6 +25,8 @@ Z:	mean RMS PP Displacement_PP Envelope_Vrms Envelope_Peak
 #define CMD_OTA_START    0x50   // 开始升级 (参数: 固件总长度)
 #define CMD_OTA_DATA     0x51   // 传输数据 (参数: 偏移量 + 数据)
 #define CMD_OTA_END      0x52   // 结束升级 (参数: CRC校验 / 直接重启)
+#define CMD_REBOOT       0x99   // 结束升级 (参数: CRC校验 / 直接重启)
+
 
 /* ────────── TEST Channel 定义 ────────── */
 #define CH_X         		 0x01
