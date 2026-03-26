@@ -466,7 +466,7 @@ void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf)
 
     Apply_Median_Filter_3(g_data_x, FFT_N_XY); // 去除尖峰毛刺 (修复峭度偏高)
     HighPassFilter_10Hz(g_data_x, FFT_N_XY, &hpf_state_x); // 传入状态
-	  Calc_TimeDomain_Only(g_data_x, FFT_N_XY, &X_data);
+    Calc_TimeDomain_Only(g_data_x, FFT_N_XY, &X_data);
     LowPassFilter_1kHz(g_data_x, FFT_N_XY, &lpf_state_x);  // 传入状态
     if (FFT_N_XY <= FFT_N_Z * 2) { 
         memcpy(fftBuf, g_data_x, FFT_N_XY * sizeof(float)); 
@@ -474,7 +474,7 @@ void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf)
         Calc_RMS_Only(fftBuf, FFT_N_XY, &X_data); 
     }
 		
-	  Apply_Median_Filter_3(g_data_y, FFT_N_XY); // 去毛刺
+	Apply_Median_Filter_3(g_data_y, FFT_N_XY); // 去毛刺
     HighPassFilter_10Hz(g_data_y, FFT_N_XY, &hpf_state_y);   // 去直流
     Calc_TimeDomain_Only(g_data_y, FFT_N_XY, &Y_data);
     LowPassFilter_1kHz(g_data_y, FFT_N_XY, &lpf_state_y);    // 去噪
@@ -491,8 +491,7 @@ void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf)
         if (g_CaptureIndex >= LONG_WAVE_PKT) 
         {
             g_CaptureIndex = 0;
-							//HighPassFilter_10Hz(g_data_z, FFT_N_Z, &hpf_state_z);
-					   g_LongCaptureState = 0; 
+            g_LongCaptureState = 0; 
         }
     }
 	
@@ -501,7 +500,7 @@ void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf)
     Calc_FreqDomain_Z(g_data_z, FFT_N_Z, &Z_data);
     Calc_Envelope_Z(g_data_z, FFT_N_Z, &Z_data);
     memcpy(fftBuf, g_data_z, FFT_N_Z * sizeof(float));
-		LowPassFilter_1kHz(fftBuf, FFT_N_Z, &lpf_state_z);
+    LowPassFilter_1kHz(fftBuf, FFT_N_Z, &lpf_state_z);
     Integrate_Acc_To_Vel(fftBuf, FFT_N_Z);
     Calc_RMS_Only(fftBuf, FFT_N_Z, &Z_data);
 

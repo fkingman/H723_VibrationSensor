@@ -546,7 +546,7 @@ static void Handle_OTA_Data(uint8_t dev_id, const uint8_t *rx_data, uint16_t fra
 // 主机发送: [DevID] [0x52] [Len(4B)] [WholeCRC32(4B)] [CRC16]
 static void Handle_OTA_End(uint8_t dev_id, const uint8_t *rx_data)
 {
-		uint32_t fw_len = rd_be32(rx_data);     // 前4字节是长度
+	uint32_t fw_len = rd_be32(rx_data);     // 前4字节是长度
     uint32_t host_crc = rd_be32(rx_data + 4); // 后4字节是上位机算好的 CRC32
 
 		if (fw_len == 0 || s_received_bytes != fw_len)
@@ -563,14 +563,14 @@ static void Handle_OTA_End(uint8_t dev_id, const uint8_t *rx_data)
         static uint8_t tx_err[8]; uint8_t *p = tx_err;
         *p++ = dev_id; *p++ = CMD_OTA_END ; *p++ = 0x02; // 异常响应
         *p++ = 0xBA; *p++ = 0xD1; // 错误码 BAD1
-        uint16_t crc = Modbus_CRC16(tx_err, 4);
+        uint16_t crc = Modbus_CRC16(tx_err, 5);
         *p++ = (uint8_t)crc; *p++ = (uint8_t)(crc >> 8);
         uart3_send_dma(tx_err, 6);
         return; 
     }
 		//正确回ACK
 		static uint8_t tx[7];uint8_t *p = tx;
-		*p++ = dev_id; *p++ = CMD_OTA_START; *p++ = 0x02; *p++ = 0x4F; *p++ = 0x4B; // 4F4B OK
+		*p++ = dev_id; *p++ = CMD_OTA_END; *p++ = 0x02; *p++ = 0x4F; *p++ = 0x4B; // 4F4B OK
 		uint16_t crc = Modbus_CRC16(tx, (uint16_t)(p - tx));
 		*p++ = (uint8_t)crc; *p++ = (uint8_t)(crc >> 8);
 	
