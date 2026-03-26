@@ -198,27 +198,34 @@ static void send_wave_ack(uint8_t dev_id)
 
 /* ---- 协议常量 ---- */
 enum { PTS_PER_PKT   = 64 };                     // 每包 64 点
-enum { HEADER_NOCRC  = 4  };                     // dev_id(1) + CMD_WAVE(1) + seq(1) + total_pkts(1) 
+enum { HEADER_NOCRC  = 6  };                     // dev_id(1) + CMD_WAVE(1) + seq(2) + total_pkts(2) 
 enum { DATA_LEN      = PTS_PER_PKT * 4 };        // 64 * 4 = 256
-enum { FRAME_NOCRC   = HEADER_NOCRC + DATA_LEN };// 4 + 256 = 260
+enum { FRAME_NOCRC   = HEADER_NOCRC + DATA_LEN };// 6 + 256 = 262
 enum { CRC_LEN       = 2  };
-enum { FRAME_LEN     = FRAME_NOCRC + CRC_LEN };  // 260 + 2 = 262
+enum { FRAME_LEN     = FRAME_NOCRC + CRC_LEN };  // 262 + 2 = 264
 
-/* 帧：dev_id | CMD_WAVE  | seq(1B) |total_pkts(1B) | 64×float(BE) | CRC(LE) */
-static void send_wave_pkt(uint8_t dev_id, const float *buf, uint8_t seq, uint8_t total_pkts)
+/* 帧：dev_id | CMD_WAVE  | seq(2B) |total_pkts(2B) | 64×float(BE) | CRC(LE) */
+static void send_wave_pkt(uint8_t dev_id, const float *buf, uint16_t seq, uint16_t total_pkts)
 {
     if (!buf) return;
 
-    uint8_t *p = g_modbus_tx_buf;
-		memset(g_modbus_tx_buf, 0, FRAME_LEN);
-		uint32_t offset = (uint32_t)seq * PTS_PER_PKT; 
-	
-		/* 头部 4B */
-		*p++ = dev_id;        // 1B
-		*p++ = CMD_WAVE_PACK; // 1B
-		*p++ = seq;           // 1B，当前序号
-		*p++ = total_pkts;    // 1B，总包数
+    const uint16_t expected_total = (uint16_t)((LONG_WAVE_LEN + PTS_PER_PKT - 1U) / PTS_PER_PKT);
+    if ((total_pkts == 0U) || (total_pkts > expected_total)) {
+        total_pkts = expected_total;
+    }
+    if ((seq >= total_pkts) || (seq >= expected_total)) {
+        return;
+    }
 
+    uint8_t *p = g_modbus_tx_buf;
+    memset(g_modbus_tx_buf, 0, FRAME_LEN);
+    uint32_t offset = (uint32_t)seq * PTS_PER_PKT; 
+	
+    /* 头部 6B */
+    *p++ = dev_id;        // 1B
+    *p++ = CMD_WAVE_PACK; // 1B
+    wr_be16(&p, seq);
+    wr_be16(&p, total_pkts);
 
     /* 数据区：64 个 float，按大端写入；末包不足补 0.0f */
 		for (uint16_t i = 0; i < PTS_PER_PKT; ++i) {
@@ -226,7 +233,7 @@ static void send_wave_pkt(uint8_t dev_id, const float *buf, uint8_t seq, uint8_t
         put_be_f32(&p, v); // 大端模式写入
     }
 
-		uint16_t len = (uint16_t)(p - g_modbus_tx_buf);
+	uint16_t len = (uint16_t)(p - g_modbus_tx_buf);
     uint16_t crc = Modbus_CRC16(g_modbus_tx_buf, len);
     *p++ = (uint8_t)(crc & 0xFF);       
     *p++ = (uint8_t)((crc >> 8) & 0xFF);
@@ -589,19 +596,29 @@ static void Handle_OTA_End(uint8_t dev_id, const uint8_t *rx_data)
 void Protocol_HandleRxFrame(const uint8_t *rx, uint16_t len, uint8_t local_address)
 {
     if (len < RX_MIN_LEN)                         { return; }
-//    if (rx[0]!=PKT_HEAD_H || rx[1]!=PKT_HEAD_L)   { return; }
-//    if (rx[len-2]!=PKT_FOOT_H || rx[len-1]!=PKT_FOOT_L) { return; }
-//    if (checksum8(rx, len-3) != rx[len-3])        {             /* CRC 错 */
-//        Protocol_SendNack(rx[2], rx[3], PKT_ERR_CRC);
-//        return;
-//    }
+    
+    uint16_t rx_crc = rd_le16(&rx[len - 2U]);
+    uint16_t calc_crc = Modbus_CRC16(rx, (uint16_t)(len - 2U));
+    if (rx_crc != calc_crc) {
+        return;
+    }
 
     uint8_t dev_id = rx[0];                       // 提取请求中的设备地址
     uint8_t cmd    = rx[1];
-		uint8_t b2   	 = rx[2];
-		uint8_t b3   	 = rx[3];
     const bool is_broadcast = (dev_id == 0x00);
-						
+    uint16_t wave_seq = 0U;
+    uint16_t wave_total = 0U;
+    
+    if (cmd == CMD_WAVE_PACK) {
+        if (len >= 8U) {
+            // 新协议：dev|cmd|seq(2B)|total(2B)|crc(2B)
+            wave_seq = rd_be16(&rx[2]);
+            wave_total = rd_be16(&rx[4]);
+        } else {
+            return;
+        }
+    }
+
 		if (is_broadcast && cmd == CMD_DISCOVER) {
         send_discover_rsp(local_address);  // 回 UID + 当前地址
         return;
@@ -626,7 +643,7 @@ void Protocol_HandleRxFrame(const uint8_t *rx, uint16_t len, uint8_t local_addre
     {
     case CMD_FEATURE: send_feature_pkt(dev_id, &X_data, &Y_data, &Z_data, Temp); break;
 		case CMD_WAVE:Create_Wave_Snapshot();send_wave_ack(dev_id); break;
-		case CMD_WAVE_PACK:	send_wave_pkt(dev_id, Tx_Wave_Buffer_Z, b2, b3); break;
+		case CMD_WAVE_PACK:	send_wave_pkt(dev_id, Tx_Wave_Buffer_Z, wave_seq, wave_total); break;
 		case CMD_CONFIG:Config_ParseAndApply_Freq(rx);Cfg_SendAck(dev_id);break;
     case CMD_CALIBRATION:Z_Calib_Z_Upright_Neg1G(g_data_z, 100);CALIBRATION_Config_SendAck(dev_id); break;
 		case CMD_OTA_START:	Handle_OTA_Start(dev_id, &rx[2]);break;
