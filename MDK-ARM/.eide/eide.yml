@@ -101,6 +101,7 @@ targets:
         - RTE/_H723_VibrationSensor
       libList: []
     excludeList: []
+    settings: {}
     toolchain: AC5
     toolchainConfigMap:
       AC5:
@@ -133,9 +134,10 @@ targets:
             output-debug-info: enable
             use-microLIB: true
           linker:
-            $disableOutputTask: true
+            $disableOutputTask: false
             $outputTaskExcludes:
               - .bin
+              - .s19
             misc-controls: --remove
             output-format: elf
             ro-base: ""

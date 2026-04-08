@@ -7,7 +7,7 @@ extern uint16_t wave_points;
 static uint32_t s_freq_hz  = 0;
 static uint16_t s_points   = 0;
 
-/* ---- ÅäÖÃµ¥¸ö¶¨Ê±Æ÷ ---- */
+/* ---- é…ç½®å•ä¸ªå®šæ—¶å™¨ ---- */
 static HAL_StatusTypeDef Config_Timer(TIM_HandleTypeDef *htim, uint32_t freq_hz)
 {
     if (freq_hz == 0) return HAL_ERROR;
@@ -16,54 +16,54 @@ static HAL_StatusTypeDef Config_Timer(TIM_HandleTypeDef *htim, uint32_t freq_hz)
     uint32_t psc = 0;
     uint32_t arr = 0;
 
-    // 1. ¼ÆËãÀíÏëµÄ×Ü·ÖÆµÖµ (Total Divider)
+    // 1. è®¡ç®—ç†æƒ³çš„æ€»åˆ†é¢‘å€¼ (Total Divider)
     // Target_Freq = TIM_CLK / (PSC+1) / (ARR+1)
     // Total_Div = (PSC+1) * (ARR+1) = TIM_CLK / Freq
     uint64_t total_div = ((uint64_t)timclk + freq_hz/2) / freq_hz; 
     
-    // 2. ¶¯Ì¬¼ÆËã PSC ºÍ ARR
-    // Ä¿±êÊÇÈÃ ARR ²»³¬¹ı¼Ä´æÆ÷ÉÏÏŞ (TIM2ÊÇ32Î», TIM3ÊÇ16Î»)
-    // ÎªÁË°²È«£¬Í³Ò»°´ 16 Î»ÏŞÖÆ¼ÆËã (¼æÈİ TIM3)£¬»òÕßÅĞ¶Ï Instance
-    uint32_t max_arr = 0xFFFF; // Ä¬ÈÏ°´16Î»ÏŞÖÆ£¬±£Ö¤TIM3²»Òç³ö
+    // 2. åŠ¨æ€è®¡ç®— PSC å’Œ ARR
+    // ç›®æ ‡æ˜¯è®© ARR ä¸è¶…è¿‡å¯„å­˜å™¨ä¸Šé™ (TIM2æ˜¯32ä½, TIM3æ˜¯16ä½)
+    // ä¸ºäº†å®‰å…¨ï¼Œç»Ÿä¸€æŒ‰ 16 ä½é™åˆ¶è®¡ç®— (å…¼å®¹ TIM3)ï¼Œæˆ–è€…åˆ¤æ–­ Instance
+    uint32_t max_arr = 0xFFFF; // é»˜è®¤æŒ‰16ä½é™åˆ¶ï¼Œä¿è¯TIM3ä¸æº¢å‡º
     
     if (htim->Instance == TIM2) {
-        max_arr = 0xFFFFFFFF; // TIM2 ÊÇ32Î»
+        max_arr = 0xFFFFFFFF; // TIM2 æ˜¯32ä½
     }
 
-    // Èç¹û total_div ³¬¹ıÁËµ±Ç°µÄ ARR ÉÏÏŞ£¬¾ÍĞèÒªÔö¼Ó PSC
+    // å¦‚æœ total_div è¶…è¿‡äº†å½“å‰çš„ ARR ä¸Šé™ï¼Œå°±éœ€è¦å¢åŠ  PSC
     // (PSC+1) = Total_Div / (ARR_Max + 1)
 		uint64_t limit_div = (uint64_t)max_arr + 1;
     uint32_t psc_plus_1 = (uint32_t)(total_div / limit_div) + 1;
     
     psc = psc_plus_1 - 1;
-    // ÏŞÖÆ PSC Ò²ÊÇ 16 Î»µÄ
+    // é™åˆ¶ PSC ä¹Ÿæ˜¯ 16 ä½çš„
     if (psc > 0xFFFF) psc = 0xFFFF; 
 
-    // 3. ·´ÍÆ ARR
+    // 3. åæ¨ ARR
     // (ARR+1) = Total_Div / (PSC+1)
     uint64_t arr_plus_1 = total_div / (psc + 1);
     arr = (uint32_t)arr_plus_1 - 1;
 
-    // 4. Ğ´Èë¼Ä´æÆ÷
+    // 4. å†™å…¥å¯„å­˜å™¨
     __HAL_TIM_DISABLE(htim);
     __HAL_TIM_SET_PRESCALER(htim, psc);
     __HAL_TIM_SET_AUTORELOAD(htim, arr);
     __HAL_TIM_SET_COUNTER(htim, 0);
-    htim->Instance->EGR = TIM_EGR_UG; // Ë¢ĞÂÓ°×Ó¼Ä´æÆ÷
+    htim->Instance->EGR = TIM_EGR_UG; // åˆ·æ–°å½±å­å¯„å­˜å™¨
     __HAL_TIM_ENABLE(htim);
     
     return HAL_OK;
 }
 
-/* ---- ¶ÔÍâAPI ---- */
+/* ---- å¯¹å¤–API ---- */
 HAL_StatusTypeDef ACQ_Init(uint32_t freq_hz, uint16_t points)
 {
     s_points = points ? points : 1;
     wave_points = s_points;
 
-    s_freq_hz = freq_hz ? freq_hz : 25600u; // Ä¬ÈÏÖµ
+    s_freq_hz = freq_hz ? freq_hz : 25600u; // é»˜è®¤å€¼
 
-    // Í¬Ê±³õÊ¼»¯Á½¸ö¶¨Ê±Æ÷
+    // åŒæ—¶åˆå§‹åŒ–ä¸¤ä¸ªå®šæ—¶å™¨
     HAL_StatusTypeDef st1 = Config_Timer(&htim2, s_freq_hz);
     HAL_StatusTypeDef st2 = Config_Timer(&htim3, s_freq_hz);
 
@@ -75,7 +75,7 @@ HAL_StatusTypeDef ACQ_SetFreqHz(uint32_t freq_hz)
 {
     if (freq_hz == 0) return HAL_ERROR;
     
-    // Í¬Ê±¸üĞÂÁ½¸ö¶¨Ê±Æ÷
+    // åŒæ—¶æ›´æ–°ä¸¤ä¸ªå®šæ—¶å™¨
     HAL_StatusTypeDef st1 = Config_Timer(&htim2, freq_hz);
     HAL_StatusTypeDef st2 = Config_Timer(&htim3, freq_hz);
 
@@ -104,7 +104,7 @@ uint16_t ACQ_GetPoints(void)
 
 HAL_StatusTypeDef ACQ_TimerStart(void)
 {
-    // Á½¸ö¶¼ÒªÆô¶¯
+    // ä¸¤ä¸ªéƒ½è¦å¯åŠ¨
     HAL_TIM_Base_Start(&htim2);
     HAL_TIM_Base_Start(&htim3);
     return HAL_OK;

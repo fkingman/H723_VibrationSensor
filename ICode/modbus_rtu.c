@@ -210,6 +210,7 @@ static void send_wave_pkt(uint8_t dev_id, const float *buf, uint16_t seq, uint16
     if (!buf) return;
 
     const uint16_t expected_total = (uint16_t)((LONG_WAVE_LEN + PTS_PER_PKT - 1U) / PTS_PER_PKT);
+    const uint32_t valid_points = (uint32_t)LONG_WAVE_LEN;
     if ((total_pkts == 0U) || (total_pkts > expected_total)) {
         total_pkts = expected_total;
     }
@@ -224,12 +225,15 @@ static void send_wave_pkt(uint8_t dev_id, const float *buf, uint16_t seq, uint16
     /* 头部 6B */
     *p++ = dev_id;        // 1B
     *p++ = CMD_WAVE_PACK; // 1B
-    wr_be16(&p, seq);
-    wr_be16(&p, total_pkts);
+    put_be_u16(&p, seq);
+    put_be_u16(&p, total_pkts);
 
     /* 数据区：64 个 float，按大端写入；末包不足补 0.0f */
 		for (uint16_t i = 0; i < PTS_PER_PKT; ++i) {
-        float v = buf[offset + i]; 
+        float v = 0.0f;
+        if ((offset + i) < valid_points) {
+            v = buf[offset + i];
+        }
         put_be_f32(&p, v); // 大端模式写入
     }
 
