@@ -42,6 +42,7 @@ void MX_USART3_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 void On_IDLE(UART_HandleTypeDef *huart);
+void Uart3_RecoverFromError(void);
 
 /* USER CODE END Prototypes */
 

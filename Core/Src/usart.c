@@ -21,8 +21,19 @@
 #include "usart.h"
 
 /* USER CODE BEGIN 0 */
+static void Uart3_StopRxDmaOnly(void)
+{
+    if (HAL_IS_BIT_SET(huart3.Instance->CR3, USART_CR3_DMAR)) {
+        ATOMIC_CLEAR_BIT(huart3.Instance->CR3, USART_CR3_DMAR);
+    }
 
+    if (huart3.hdmarx != NULL) {
+        (void)HAL_DMA_Abort(huart3.hdmarx);
+    }
 
+    huart3.RxState = HAL_UART_STATE_READY;
+    huart3.ReceptionType = HAL_UART_RECEPTION_STANDARD;
+}
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart3;
@@ -195,7 +206,7 @@ void USAR_UART_IDLECallback(UART_HandleTypeDef *huart)
 	if(huart->Instance == USART3)
 	{
 		// 停止本次DMA传输
-		HAL_UART_DMAStop(&huart3);  																									 
+		Uart3_StopRxDmaOnly();
 		// 计算接收到的数据长度
     uint16_t recv_len = RX_DMA_BUF_SZ - __HAL_DMA_GET_COUNTER(&hdma_usart3_rx);
 		if (recv_len == 0) {
@@ -217,6 +228,14 @@ void USAR_UART_IDLECallback(UART_HandleTypeDef *huart)
 //  HAL_UART_Receive_DMA(&huart3, rx_dma_buf, RX_DMA_BUF_SZ);
 		Uart3_RxStart();
 }
+
+void Uart3_RecoverFromError(void)
+{
+    __HAL_UART_CLEAR_PEFLAG(&huart3);
+    Uart3_StopRxDmaOnly();
+    Uart3_RxStart();
+}
+
 /** 
 * @Description:串口空闲中断检测，写在函数void USART2_IRQHandler(void)中
 * @param

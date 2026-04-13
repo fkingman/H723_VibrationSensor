@@ -421,6 +421,32 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
     }
 }
 
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+    if (huart->Instance == USART3)
+    {
+        g_tx_busy = 0;
+        Uart3_RecoverFromError();
+    }
+}
+
+void HAL_UART_AbortTransmitCpltCallback(UART_HandleTypeDef *huart)
+{
+    if (huart->Instance == USART3)
+    {
+        g_tx_busy = 0;
+    }
+}
+
+void HAL_UART_AbortCpltCallback(UART_HandleTypeDef *huart)
+{
+    if (huart->Instance == USART3)
+    {
+        g_tx_busy = 0;
+        Uart3_RecoverFromError();
+    }
+}
+
 
 
 /* USER CODE END 4 */

@@ -11,7 +11,6 @@ extern float zBuf[FFT_N_Z];
 extern uint16_t g_cfg_freq_hz;
 extern uint16_t g_cfg_points;
 extern uint16_t wave_points;   // 波形发送
-extern uint8_t g_modbus_tx_buf[2048];
 
 extern float* getZBuf(void);
 
@@ -210,7 +209,6 @@ static void send_wave_pkt(uint8_t dev_id, const float *buf, uint16_t seq, uint16
     if (!buf) return;
 
     const uint16_t expected_total = (uint16_t)((LONG_WAVE_LEN + PTS_PER_PKT - 1U) / PTS_PER_PKT);
-    const uint32_t valid_points = (uint32_t)LONG_WAVE_LEN;
     if ((total_pkts == 0U) || (total_pkts > expected_total)) {
         total_pkts = expected_total;
     }
@@ -218,32 +216,29 @@ static void send_wave_pkt(uint8_t dev_id, const float *buf, uint16_t seq, uint16
         return;
     }
 
-    uint8_t *p = g_modbus_tx_buf;
-    memset(g_modbus_tx_buf, 0, FRAME_LEN);
-    uint32_t offset = (uint32_t)seq * PTS_PER_PKT; 
-	
+    static uint8_t tx[FRAME_LEN]; // FRAME_LEN = 264
+
+    uint8_t *p = tx;
+    uint32_t offset = (uint32_t)seq * PTS_PER_PKT;
+
     /* 头部 6B */
-    *p++ = dev_id;        // 1B
-    *p++ = CMD_WAVE_PACK; // 1B
+    *p++ = dev_id;
+    *p++ = CMD_WAVE_PACK;
     put_be_u16(&p, seq);
     put_be_u16(&p, total_pkts);
 
-    /* 数据区：64 个 float，按大端写入；末包不足补 0.0f */
-		for (uint16_t i = 0; i < PTS_PER_PKT; ++i) {
-        float v = 0.0f;
-        if ((offset + i) < valid_points) {
-            v = buf[offset + i];
-        }
-        put_be_f32(&p, v); // 大端模式写入
+    /* 数据区：64 个float，按大端写入；末包不足补 0.0f */
+    for (uint16_t i = 0; i < PTS_PER_PKT; ++i) {
+        uint32_t idx = offset + i;
+        float v = (idx < LONG_WAVE_LEN) ? buf[idx] : 0.0f;
+        put_be_f32(&p, v);
     }
 
-	uint16_t len = (uint16_t)(p - g_modbus_tx_buf);
-    uint16_t crc = Modbus_CRC16(g_modbus_tx_buf, len);
-    *p++ = (uint8_t)(crc & 0xFF);       
-    *p++ = (uint8_t)((crc >> 8) & 0xFF);
+    uint16_t crc = Modbus_CRC16(tx, (uint16_t)(p - tx));
+    *p++ = (uint8_t)(crc & 0xFF);        // Low
+    *p++ = (uint8_t)((crc >> 8) & 0xFF); // High
 
-//		HAL_UART_Transmit_DMA(&huart3, tx, (uint16_t)(p - tx));
-		uart3_send_dma(g_modbus_tx_buf, (uint16_t)(p - g_modbus_tx_buf));
+    uart3_send_dma(tx, (uint16_t)(p - tx));
 }
 
 /**********************************广播发现应答**********************************/

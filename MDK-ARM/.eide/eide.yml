@@ -134,10 +134,8 @@ targets:
             output-debug-info: enable
             use-microLIB: true
           linker:
-            $disableOutputTask: false
             $outputTaskExcludes:
               - .bin
-              - .s19
             misc-controls: --remove
             output-format: elf
             ro-base: ""
