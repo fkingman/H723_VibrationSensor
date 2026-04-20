@@ -44,7 +44,7 @@ Z:	mean RMS PP Displacement_PP Envelope_Vrms Envelope_Peak
 
 extern volatile uint8_t g_tx_busy;
 /* 上位机发来一帧后调用此函数，len=完整帧长度 */
-void Protocol_HandleRxFrame(const uint8_t *rx, uint16_t len, uint8_t local_address);
+bool Protocol_HandleRxFrame(const uint8_t *rx, uint16_t len, uint8_t local_address);
 
 
 #endif

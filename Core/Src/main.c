@@ -37,6 +37,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define MASTER_SILENT_RESET_MS 10000U
+
 //U3½ÓÊÕ
 __attribute__((section(".ARM.__at_0x24024000"))) uint8_t rx_dma_buf[RX_DMA_BUF_SZ];
 __attribute__((section(".ARM.__at_0x24024800"))) uint8_t rx_frame_buf[RX_FRAME_MAX];
@@ -96,6 +98,7 @@ volatile uint8_t xy_data_ready_flag = 0;
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+static uint32_t s_last_master_seen_tick = 0U;
 
 /* USER CODE END PV */
 
@@ -219,6 +222,7 @@ int main(void)
 	Ds18b20_Init();
   Start_ADC_DMA();
 	rx_frame_ready = 0;
+  s_last_master_seen_tick = HAL_GetTick();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -228,12 +232,21 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		HAL_IWDG_Refresh(&hiwdg1);
     uint32_t now = HAL_GetTick();
+    Uart3_ServiceRxIdleTimeout();
     if (rx_frame_ready) 
       {
+        uint16_t frame_len = rx_frame_len;
         rx_frame_ready = 0;  
-        Protocol_HandleRxFrame(rx_frame_buf, rx_frame_len, LOCAL_DEVICE_ADDR);
+        if (Protocol_HandleRxFrame(rx_frame_buf, frame_len, LOCAL_DEVICE_ADDR)) {
+            s_last_master_seen_tick = now;
+        }
+      }
+
+    if ((now - s_last_master_seen_tick) >= MASTER_SILENT_RESET_MS)
+      {
+        HAL_Delay(20);
+        HAL_NVIC_SystemReset();
       }
 
     if (z_data_ready_flag && xy_data_ready_flag)
@@ -272,7 +285,8 @@ int main(void)
               // printf("Async Temp: %.1f\r\n", Temp);
               temp_state = 0; 
           }
-      }  
+      }
+		HAL_IWDG_Refresh(&hiwdg1);
 	}
   /* USER CODE END 3 */
 }
@@ -511,3 +525,5 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
+
+

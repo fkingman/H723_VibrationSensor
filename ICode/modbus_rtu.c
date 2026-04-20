@@ -5,12 +5,12 @@
 
 #define RX_MIN_LEN     7          /* Head(2)+Dev(1)+Cmd(1)+Ch(1)+Chk(1)+Foot(2) */
 #define MAX_SAMPLE_FREQ_HZ   51200u  // 51.2kHz
-#define MIN_SAMPLE_FREQ_HZ   1024u   // 1kHz (保证4秒内能出结果)
+#define MIN_SAMPLE_FREQ_HZ   1024u   // 1kHz (淇濊瘉4绉掑唴鑳藉嚭缁撴灉)
 
 extern float zBuf[FFT_N_Z];
 extern uint16_t g_cfg_freq_hz;
 extern uint16_t g_cfg_points;
-extern uint16_t wave_points;   // 波形发送
+extern uint16_t wave_points;   // 娉㈠舰鍙戦€?
 
 extern float* getZBuf(void);
 
@@ -27,7 +27,7 @@ static inline void UID_Fill_BE_w0w1w2(uint8_t out[12])
     uint32_t w1 = HAL_GetUIDw1();
     uint32_t w2 = HAL_GetUIDw2();
 
-    /* 大端：高位在前；顺序固定为 w0 | w1 | w2 */
+    /* 澶х锛氶珮浣嶅湪鍓嶏紱椤哄簭鍥哄畾涓?w0 | w1 | w2 */
     out[0]  = (uint8_t)(w0 >> 24);
     out[1]  = (uint8_t)(w0 >> 16);
     out[2]  = (uint8_t)(w0 >>  8);
@@ -46,13 +46,13 @@ static inline void UID_Fill_BE_w0w1w2(uint8_t out[12])
 
 uint16_t Modbus_CRC16(const uint8_t *data, uint16_t length)
 {
-    uint16_t crc = 0xFFFF;           // 初始值
+    uint16_t crc = 0xFFFF;           // 鍒濆鍊?
     const uint16_t poly = 0xA001;    
 
     while (length--) {
-        crc ^= *data++;              // 异或
+        crc ^= *data++;              // 寮傛垨
         for (uint8_t i = 0; i < 8; ++i) {
-            if (crc & 0x0001) {      // 最低位
+            if (crc & 0x0001) {      // 鏈€浣庝綅
                 crc = (crc >> 1) ^ poly;
             } else {
                 crc >>= 1;
@@ -62,7 +62,7 @@ uint16_t Modbus_CRC16(const uint8_t *data, uint16_t length)
     return crc;                     
 }
 
-// 针对 Flash 的流式 CRC32 校验函数
+// 閽堝 Flash 鐨勬祦寮?CRC32 鏍￠獙鍑芥暟
 static uint32_t Calc_Flash_CRC32(uint32_t start_addr, uint32_t len)
 {
     uint32_t crc = 0xFFFFFFFF;
@@ -70,7 +70,7 @@ static uint32_t Calc_Flash_CRC32(uint32_t start_addr, uint32_t len)
     
     while (len--)
     {
-        crc ^= *p++; // 从 Flash 直接读取
+        crc ^= *p++; // 浠?Flash 鐩存帴璇诲彇
         for (uint32_t i = 0; i < 8; i++)
         {
             if (crc & 1)
@@ -89,7 +89,7 @@ static HAL_StatusTypeDef uart3_send_dma(uint8_t *buf, uint16_t len)
     {
         if ((HAL_GetTick() - tickstart) > 1000u) 
         {
-            g_tx_busy = 0; // 强制复位繁忙标志，尝试挽救
+            g_tx_busy = 0; // 寮哄埗澶嶄綅绻佸繖鏍囧織锛屽皾璇曟尳鏁?
             break; 
         }
     }
@@ -98,14 +98,14 @@ static HAL_StatusTypeDef uart3_send_dma(uint8_t *buf, uint16_t len)
     return HAL_UART_Transmit_DMA(&huart3, buf, len);
 }
 
-/**********************************特征值应答**********************************/
+/**********************************鐗瑰緛鍊煎簲绛?*********************************/
 static void send_feature_pkt(uint8_t dev_id,
                               const AxisFeatureValue *X_data,
                               const AxisFeatureValue *Y_data,
                               const AxisFeatureValue *Z_data,
 															float temperature)
 {
-    static uint8_t tx[77];  // 3 + 16 + 16 +36 + 4 + 2 = 77 (三个结构体数据) + CRC
+    static uint8_t tx[77];  // 3 + 16 + 16 +36 + 4 + 2 = 77 (涓変釜缁撴瀯浣撴暟鎹? + CRC
     uint8_t *p = tx;
 		memset(tx, 0, sizeof(tx));
 
@@ -113,19 +113,19 @@ static void send_feature_pkt(uint8_t dev_id,
     *p++ = CMD_FEATURE;
     *p++ = 0x48;
 
-    // ----- X_data 区域：4 × float (16B) -----
+    // ----- X_data 鍖哄煙锛? 脳 float (16B) -----
 		put_be_f32(&p, X_data->mean);
     put_be_f32(&p, X_data->rms);
     put_be_f32(&p, X_data->pp);
     put_be_f32(&p, X_data->kurt);
 
-    // ----- Y_data 区域：4 × float (16B) -----
+    // ----- Y_data 鍖哄煙锛? 脳 float (16B) -----
     put_be_f32(&p, Y_data->mean);
     put_be_f32(&p, Y_data->rms);
     put_be_f32(&p, Y_data->pp);
     put_be_f32(&p, Y_data->kurt);
 
-    // ----- Z_data 区域：9 × float (36B) -----
+    // ----- Z_data 鍖哄煙锛? 脳 float (36B) -----
     put_be_f32(&p, Z_data->mean);
     put_be_f32(&p, Z_data->rms);
     put_be_f32(&p, Z_data->pp);
@@ -135,10 +135,10 @@ static void send_feature_pkt(uint8_t dev_id,
     put_be_f32(&p, Z_data->amp2x);
     put_be_f32(&p, Z_data->envelope_vrms);
     put_be_f32(&p, Z_data->envelope_peak);
-		 // -----  temp 区域 -----
+		 // -----  temp 鍖哄煙 -----
     put_be_f32(&p, temperature);
 		
-		size_t payload_len = (size_t)(p - tx);      // 已写入的真实字节数
+		size_t payload_len = (size_t)(p - tx);      // 宸插啓鍏ョ殑鐪熷疄瀛楄妭鏁?
     uint16_t crc = Modbus_CRC16(tx, payload_len);  
     *p++ = crc & 0xFF;        
     *p++ = (crc >> 8) & 0xFF; 
@@ -147,22 +147,22 @@ static void send_feature_pkt(uint8_t dev_id,
 		uart3_send_dma(tx, (uint16_t)(p - tx));	
 }
 
-/* 测试用：发送特征包，数据区用 00,11,22,...,FF 循环填充 */
+/* 娴嬭瘯鐢細鍙戦€佺壒寰佸寘锛屾暟鎹尯鐢?00,11,22,...,FF 寰幆濉厖 */
 static void send_feature_pkt_test(uint8_t dev_id)
 {
     enum { HEADER_LEN = 3, DATA_LEN = 72, CRC_LEN = 2, FRAME_LEN = HEADER_LEN + DATA_LEN + CRC_LEN };
     static uint8_t tx[FRAME_LEN];
     uint8_t *p = tx;
 
-    // 头部：dev_id, CMD_FEATURE, 固定 0x48
+    // 澶撮儴锛歞ev_id, CMD_FEATURE, 鍥哄畾 0x48
     *p++ = dev_id;
     *p++ = CMD_FEATURE;
     *p++ = 0x48;
 
-    // 数据区：72 字节固定模式填充（00,11,22,...,FF 循环）
+    // 鏁版嵁鍖猴細72 瀛楄妭鍥哄畾妯″紡濉厖锛?0,11,22,...,FF 寰幆锛?
     for (uint32_t i = 0; i < DATA_LEN; ++i) {
         *p++ = (uint8_t)((i & 0x0Fu) * 0x11u);
-        // 若你只想在 0x00,0x11,0x22,0x33 四值间循环，可改为：
+        // 鑻ヤ綘鍙兂鍦?0x00,0x11,0x22,0x33 鍥涘€奸棿寰幆锛屽彲鏀逛负锛?
         // *p++ = (uint8_t)(((i % 4u) * 0x11u) & 0xFFu);
     }
 
@@ -170,11 +170,11 @@ static void send_feature_pkt_test(uint8_t dev_id)
     *p++ = (uint8_t)(crc & 0xFF);
     *p++ = (uint8_t)((crc >> 8) & 0xFF);
 
-    // 发送实际帧长（应为 77 字节）
+    // 鍙戦€佸疄闄呭抚闀匡紙搴斾负 77 瀛楄妭锛?
 //		HAL_UART_Transmit_DMA(&huart3, tx, (uint16_t)(p - tx));
 		uart3_send_dma(tx, (uint16_t)(p - tx));	
 }
-/**********************************波形应答**********************************/
+/**********************************娉㈠舰搴旂瓟**********************************/
 static void send_wave_ack(uint8_t dev_id)
 {
     static uint8_t tx[7]; 
@@ -182,11 +182,11 @@ static void send_wave_ack(uint8_t dev_id)
 
     *p++ = dev_id;
     *p++ = CMD_WAVE;    // 
-    *p++ = 0x02;        // LEN: 数据长度为2 (即后面跟着的 b2 和 b3)
+    *p++ = 0x02;        // LEN: 鏁版嵁闀垮害涓? (鍗冲悗闈㈣窡鐫€鐨?b2 鍜?b3)
     *p++ = 0x4F;          // 
-    *p++ = 0x4B;          // 返回 ok
+    *p++ = 0x4B;          // 杩斿洖 ok
 
-    // 计算 CRC
+    // 璁＄畻 CRC
     uint16_t crc = Modbus_CRC16(tx, (size_t)(p - tx));
     *p++ = (uint8_t)(crc & 0xFF);        // Low
     *p++ = (uint8_t)((crc >> 8) & 0xFF); // High
@@ -195,15 +195,15 @@ static void send_wave_ack(uint8_t dev_id)
 		uart3_send_dma(tx, (uint16_t)(p - tx));	
 }
 
-/* ---- 协议常量 ---- */
-enum { PTS_PER_PKT   = 64 };                     // 每包 64 点
+/* ---- 鍗忚甯搁噺 ---- */
+enum { PTS_PER_PKT   = 64 };                     // 姣忓寘 64 鐐?
 enum { HEADER_NOCRC  = 6  };                     // dev_id(1) + CMD_WAVE(1) + seq(2) + total_pkts(2) 
 enum { DATA_LEN      = PTS_PER_PKT * 4 };        // 64 * 4 = 256
 enum { FRAME_NOCRC   = HEADER_NOCRC + DATA_LEN };// 6 + 256 = 262
 enum { CRC_LEN       = 2  };
 enum { FRAME_LEN     = FRAME_NOCRC + CRC_LEN };  // 262 + 2 = 264
 
-/* 帧：dev_id | CMD_WAVE  | seq(2B) |total_pkts(2B) | 64×float(BE) | CRC(LE) */
+/* 甯э細dev_id | CMD_WAVE  | seq(2B) |total_pkts(2B) | 64脳float(BE) | CRC(LE) */
 static void send_wave_pkt(uint8_t dev_id, const float *buf, uint16_t seq, uint16_t total_pkts)
 {
     if (!buf) return;
@@ -221,13 +221,13 @@ static void send_wave_pkt(uint8_t dev_id, const float *buf, uint16_t seq, uint16
     uint8_t *p = tx;
     uint32_t offset = (uint32_t)seq * PTS_PER_PKT;
 
-    /* 头部 6B */
+    /* 澶撮儴 6B */
     *p++ = dev_id;
     *p++ = CMD_WAVE_PACK;
     put_be_u16(&p, seq);
     put_be_u16(&p, total_pkts);
 
-    /* 数据区：64 个float，按大端写入；末包不足补 0.0f */
+    /* 鏁版嵁鍖猴細64 涓猣loat锛屾寜澶х鍐欏叆锛涙湯鍖呬笉瓒宠ˉ 0.0f */
     for (uint16_t i = 0; i < PTS_PER_PKT; ++i) {
         uint32_t idx = offset + i;
         float v = (idx < LONG_WAVE_LEN) ? buf[idx] : 0.0f;
@@ -241,71 +241,71 @@ static void send_wave_pkt(uint8_t dev_id, const float *buf, uint16_t seq, uint16
     uart3_send_dma(tx, (uint16_t)(p - tx));
 }
 
-/**********************************广播发现应答**********************************/
+/**********************************骞挎挱鍙戠幇搴旂瓟**********************************/
 static void send_discover_rsp(uint8_t cur_addr)
 {
-    static uint8_t tx[25]; // 稍微开大一点
+    static uint8_t tx[25]; // 绋嶅井寮€澶т竴鐐?
     uint8_t *p = tx;
 
     uint8_t uid[12];
-    UID_Fill_BE_w0w1w2(uid); // 获取唯一ID
+    UID_Fill_BE_w0w1w2(uid); // 鑾峰彇鍞竴ID
 
-    /* --- 1. 构造报文 --- */
-    *p++ = 0x00;       // 地址
-    *p++ = CMD_DISCOVER;   // 功能码
-    *p++ = 0x0D;             // 长度
+    /* --- 1. 鏋勯€犳姤鏂?--- */
+    *p++ = 0x00;       // 鍦板潃
+    *p++ = CMD_DISCOVER;   // 鍔熻兘鐮?
+    *p++ = 0x0D;             // 闀垮害
     memcpy(p, uid, 12);    // UID
     p += 12;
-    *p++ = cur_addr;       // 地址后缀
+    *p++ = cur_addr;       // 鍦板潃鍚庣紑
 
-    /* --- 2. 计算CRC --- */
+    /* --- 2. 璁＄畻CRC --- */
     uint16_t crc = Modbus_CRC16(tx, (uint16_t)(p - tx));
     *p++ = (uint8_t)(crc & 0xFF);
     *p++ = (uint8_t)(crc >> 8);
     
     uint16_t packet_len = (uint16_t)(p - tx);
 
-    /* --- 3. 冲突退避逻辑 (核心修改) --- */
+    /* --- 3. 鍐茬獊閫€閬块€昏緫 (鏍稿績淇敼) --- */
     
-    // A. 基础时间片 (Slot Time)
-    // 9600波特率发一包(约20字节)耗时约21ms。
-    // 为了防止物理层信号拖尾，我们设为 30ms 的安全间隔。
+    // A. 鍩虹鏃堕棿鐗?(Slot Time)
+    // 9600娉㈢壒鐜囧彂涓€鍖?绾?0瀛楄妭)鑰楁椂绾?1ms銆?
+    // 涓轰簡闃叉鐗╃悊灞備俊鍙锋嫋灏撅紝鎴戜滑璁句负 30ms 鐨勫畨鍏ㄩ棿闅斻€?
     uint32_t slot_time_ms = 30; 
     
-    // B. 生成随机槽位 (Slot Index)
-    // 之前只用了 uid[11]，范围太小。
-    // 现在我们将 UID 的所有字节相加，确保差异化。
+    // B. 鐢熸垚闅忔満妲戒綅 (Slot Index)
+    // 涔嬪墠鍙敤浜?uid[11]锛岃寖鍥村お灏忋€?
+    // 鐜板湪鎴戜滑灏?UID 鐨勬墍鏈夊瓧鑺傜浉鍔狅紝纭繚宸紓鍖栥€?
     uint32_t uid_sum = 0;
     for(int i = 0; i < 12; i++) {
         uid_sum += uid[i];
     }
     
-		// 加入 SysTick 或 运行时间的低位作为扰动
-    // 这样每次扫描，设备的延时都会发生微小变化
-    uint32_t tick_jitter = HAL_GetTick() & 0x1F; // 取 Tick 的低5位 (0-31)
+		// 鍔犲叆 SysTick 鎴?杩愯鏃堕棿鐨勪綆浣嶄綔涓烘壈鍔?
+    // 杩欐牱姣忔鎵弿锛岃澶囩殑寤舵椂閮戒細鍙戠敓寰皬鍙樺寲
+    uint32_t tick_jitter = HAL_GetTick() & 0x1F; // 鍙?Tick 鐨勪綆5浣?(0-31)
 		
-    // 取模 100，意味着随机产生 0 ~ 99 之间的延时等级
-    // 如果有10个设备，分到100个坑里，撞车概率会大幅降低
+    // 鍙栨ā 100锛屾剰鍛崇潃闅忔満浜х敓 0 ~ 99 涔嬮棿鐨勫欢鏃剁瓑绾?
+    // 濡傛灉鏈?0涓澶囷紝鍒嗗埌100涓潙閲岋紝鎾炶溅姒傜巼浼氬ぇ骞呴檷浣?
     uint32_t random_slot = uid_sum % 100; 
 
-    // C. 计算总延时
-    // 最大延时 = 99 * 30ms = 2970ms (约3秒)
+    // C. 璁＄畻鎬诲欢鏃?
+    // 鏈€澶у欢鏃?= 99 * 30ms = 2970ms (绾?绉?
     uint32_t total_delay = random_slot * slot_time_ms;
     
-    // D. 执行延时
+    // D. 鎵ц寤舵椂
     HAL_Delay(total_delay);
 
-    /* --- 4. 发送数据 --- */
-    // 发送前再检查一下总线是否空闲会更稳健，但在HAL库里比较麻烦，
-    // 只要时间槽错开，直接发通常没问题。
+    /* --- 4. 鍙戦€佹暟鎹?--- */
+    // 鍙戦€佸墠鍐嶆鏌ヤ竴涓嬫€荤嚎鏄惁绌洪棽浼氭洿绋冲仴锛屼絾鍦℉AL搴撻噷姣旇緝楹荤儲锛?
+    // 鍙鏃堕棿妲介敊寮€锛岀洿鎺ュ彂閫氬父娌￠棶棰樸€?
     uart3_send_dma(tx, packet_len); 
 }
 
-/**********************************配置地址应答**********************************/
-// 只认大端 UID，CRC 仍小端
+/**********************************閰嶇疆鍦板潃搴旂瓟**********************************/
+// 鍙澶х UID锛孋RC 浠嶅皬绔?
 static bool HandleSetAddr_Broadcast(const uint8_t* rx, uint16_t flen)
 {
-    if (flen < 2 + 12 + 1) return false; // dev|cmd|UID12|newAddr 最小长度
+    if (flen < 2 + 12 + 1) return false; // dev|cmd|UID12|newAddr 鏈€灏忛暱搴?
 
     if (rx[0] != 0x00 || rx[1] != CMD_SET_ADDR) return false;
 
@@ -315,16 +315,16 @@ static bool HandleSetAddr_Broadcast(const uint8_t* rx, uint16_t flen)
     const uint8_t* uid_in   = &rx[off];
     const uint8_t  new_addr = rx[off + 12];
 
-    // 大端 UID 完全匹配
+    // 澶х UID 瀹屽叏鍖归厤
 		static uint8_t uid_me[12];
-    UID_Fill_BE_w0w1w2(uid_me);                // 本机 UID（大端，w0|w1|w2）
+    UID_Fill_BE_w0w1w2(uid_me);                // 鏈満 UID锛堝ぇ绔紝w0|w1|w2锛?
 //		dump_uid("uid_in", uid_in);
 //		dump_uid("uid_me", uid_me);
     if (memcmp(uid_in, uid_me, 12) != 0) return true;
 
 //    if (new_addr == 0x00 || new_addr == 0xFF) return true;
 
-    // 幂等：一样就只回 ACK
+    // 骞傜瓑锛氫竴鏍峰氨鍙洖 ACK
     if (LOCAL_DEVICE_ADDR == new_addr) {
         static uint8_t tx[5+2];
 				uint8_t *p = tx;
@@ -350,10 +350,10 @@ static bool HandleSetAddr_Broadcast(const uint8_t* rx, uint16_t flen)
 }
 
 
-/**********************************解析配置帧**********************************/
+/**********************************瑙ｆ瀽閰嶇疆甯?*********************************/
 static void Config_ParseAndApply_Freq(const uint8_t* rx)
 {
-		uint16_t f = rd_be16(&rx[3]);        // dev|cmd cnt之后 2 字节
+		uint16_t f = rd_be16(&rx[3]);        // dev|cmd cnt涔嬪悗 2 瀛楄妭
 		if (f < MIN_SAMPLE_FREQ_HZ || f > MAX_SAMPLE_FREQ_HZ) {
         return; 
     }
@@ -362,14 +362,13 @@ static void Config_ParseAndApply_Freq(const uint8_t* rx)
 		{
         g_cfg_freq_hz = f;
 				Algo_Update_LPF_Coeff(g_cfg_freq_hz);
-				Algo_Update_HPF_Coeff(g_cfg_freq_hz);
         ACQ_SetFreqHz(g_cfg_freq_hz);
     }
 }
 
 /*static void Config_ParseAndApply_Point(const uint8_t* rx)
 {
-		uint16_t pts = rd_be16(&rx[3]);     // dev|cmd|sub 之后 2 字节
+		uint16_t pts = rd_be16(&rx[3]);     // dev|cmd|sub 涔嬪悗 2 瀛楄妭
     if (pts == 0) return;
 		if (pts > FLASH_CFG_DEFAULT_POINTS) return;
     if (pts == g_cfg_points) return;
@@ -386,7 +385,7 @@ static void Config_SendAck(uint8_t dev_id)
 
     *p++ = dev_id;
     *p++ = CMD_CONFIG;              
-    *p++ = 4;                       // payload 长度
+    *p++ = 4;                       // payload 闀垮害
 
 	  uint16_t freq16 = (uint16_t)g_cfg_freq_hz;
     uint16_t pts    = (uint16_t)g_cfg_points;
@@ -401,7 +400,7 @@ static void Config_SendAck(uint8_t dev_id)
 //		HAL_UART_Transmit_DMA(&huart3, tx, (uint16_t)(p - tx));
 		uart3_send_dma(tx, (uint16_t)(p - tx));	
 }*/
-/**********************************采样配置应答**********************************/
+/**********************************閲囨牱閰嶇疆搴旂瓟**********************************/
 static void Cfg_SendAck(uint8_t dev_id)
 {
     static uint8_t tx[5 + 2];      
@@ -420,7 +419,7 @@ static void Cfg_SendAck(uint8_t dev_id)
 //		HAL_UART_Transmit_DMA(&huart3, tx, (uint16_t)(p - tx));
 		uart3_send_dma(tx, (uint16_t)(p - tx));	
 }
-/**********************************校准配置应答**********************************/
+/**********************************鏍″噯閰嶇疆搴旂瓟**********************************/
 static void CALIBRATION_Config_SendAck(uint8_t dev_id)
 {
 		static uint8_t tx[5 + 2];
@@ -437,40 +436,40 @@ static void CALIBRATION_Config_SendAck(uint8_t dev_id)
 		uart3_send_dma(tx, (uint16_t)(p - tx));	
 }
 
-/**********************************OTA处理函数**********************************/
+/**********************************OTA澶勭悊鍑芥暟**********************************/
 static void Flash_ClearErrors(void)
 {
     __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_ALL_ERRORS_BANK1);
 }
 
-// 1. 处理 OTA 开始命令
-// 主机发送: [DevID] [0x50] [Len(4B)] [CRC]
+// 1. 澶勭悊 OTA 寮€濮嬪懡浠?
+// 涓绘満鍙戦€? [DevID] [0x50] [Len(4B)] [CRC]
 static void Handle_OTA_Start(uint8_t dev_id, const uint8_t *rx_data)
 {
-    // 解析固件总长度 (大端)
+    // 瑙ｆ瀽鍥轰欢鎬婚暱搴?(澶х)
     uint32_t total_len = rd_be32(rx_data);
     
-    // 简单检查长度 (H723 下载区 384KB)
+    // 绠€鍗曟鏌ラ暱搴?(H723 涓嬭浇鍖?384KB)
     if (total_len == 0 || total_len > (384 * 1024)) return;
 		s_received_bytes = 0;
-    // 解锁 Flash
+    // 瑙ｉ攣 Flash
     HAL_FLASH_Unlock();
-		Flash_ClearErrors(); // 关键：清除之前的错误标志
+		Flash_ClearErrors(); // 鍏抽敭锛氭竻闄や箣鍓嶇殑閿欒鏍囧織
     
-    // 擦除下载区 (Sector 4, 5, 6)
-    // 注意：擦除 384KB 可能需要几秒钟，这期间会阻塞主循环
+    // 鎿﹂櫎涓嬭浇鍖?(Sector 4, 5, 6)
+    // 娉ㄦ剰锛氭摝闄?384KB 鍙兘闇€瑕佸嚑绉掗挓锛岃繖鏈熼棿浼氶樆濉炰富寰幆
     FLASH_EraseInitTypeDef EraseInitStruct;
     uint32_t SectorError;
 
     EraseInitStruct.TypeErase     = FLASH_TYPEERASE_SECTORS;
     EraseInitStruct.Banks         = FLASH_BANK_1;
-    EraseInitStruct.Sector        = FLASH_SECTOR_4; // 从 Sector 4 开始
-    EraseInitStruct.NbSectors     = 3;              // 擦除 4, 5, 6
+    EraseInitStruct.Sector        = FLASH_SECTOR_4; // 浠?Sector 4 寮€濮?
+    EraseInitStruct.NbSectors     = 3;              // 鎿﹂櫎 4, 5, 6
     EraseInitStruct.VoltageRange  = FLASH_VOLTAGE_RANGE_3;
 
     if (HAL_FLASHEx_Erase(&EraseInitStruct, &SectorError) == HAL_OK)
     {
-        // 擦除成功，回复 ACK
+        // 鎿﹂櫎鎴愬姛锛屽洖澶?ACK
         static uint8_t tx[7];uint8_t *p = tx;
         *p++ = dev_id; *p++ = CMD_OTA_START; *p++ = 0x02; *p++ = 0x4F; *p++ = 0x4B; // 4F4B OK
         uint16_t crc = Modbus_CRC16(tx, (uint16_t)(p - tx));
@@ -483,50 +482,50 @@ static void Handle_OTA_Start(uint8_t dev_id, const uint8_t *rx_data)
 
 
 
-// 2. 处理 OTA 数据包
-// 主机发送: [DevID] [CMD] [Offset(4B)] [DataLen(2B)] [Data...] [CRC]
+// 2. 澶勭悊 OTA 鏁版嵁鍖?
+// 涓绘満鍙戦€? [DevID] [CMD] [Offset(4B)] [DataLen(2B)] [Data...] [CRC]
 static void Handle_OTA_Data(uint8_t dev_id, const uint8_t *rx_data, uint16_t frame_payload_len)
 {
-    // frame_payload_len 是除去头部(Dev+Cmd)和尾部(CRC)后的总长度
+    // frame_payload_len 鏄櫎鍘诲ご閮?Dev+Cmd)鍜屽熬閮?CRC)鍚庣殑鎬婚暱搴?
     
-    // 1. 基础长度检查: 至少要有 Offset(4) + DataLen(2) = 6 字节
+    // 1. 鍩虹闀垮害妫€鏌? 鑷冲皯瑕佹湁 Offset(4) + DataLen(2) = 6 瀛楄妭
     if (frame_payload_len < 6) return;
     
-    // 2. 解析参数
-    uint32_t offset = rd_be32(rx_data);          // 读取 4字节 偏移
-    uint16_t expect_len = rd_be16(rx_data + 4);  // 读取 2字节 主机指定的长度
-    const uint8_t *pData = rx_data + 6;          // 数据指针向后移 6 字节
+    // 2. 瑙ｆ瀽鍙傛暟
+    uint32_t offset = rd_be32(rx_data);          // 璇诲彇 4瀛楄妭 鍋忕Щ
+    uint16_t expect_len = rd_be16(rx_data + 4);  // 璇诲彇 2瀛楄妭 涓绘満鎸囧畾鐨勯暱搴?
+    const uint8_t *pData = rx_data + 6;          // 鏁版嵁鎸囬拡鍚戝悗绉?6 瀛楄妭
     
-    // 3. 计算实际剩余的数据字节数
+    // 3. 璁＄畻瀹為檯鍓╀綑鐨勬暟鎹瓧鑺傛暟
     uint16_t actual_len = frame_payload_len - 6;
 
-    // 4. 校验主机发送的长度 与 实际接收长度是否一致
-    // 如果不一致，说明传输过程有丢包或协议解析错误，绝对不能写入，否则会越界或错位
+    // 4. 鏍￠獙涓绘満鍙戦€佺殑闀垮害 涓?瀹為檯鎺ユ敹闀垮害鏄惁涓€鑷?
+    // 濡傛灉涓嶄竴鑷达紝璇存槑浼犺緭杩囩▼鏈変涪鍖呮垨鍗忚瑙ｆ瀽閿欒锛岀粷瀵逛笉鑳藉啓鍏ワ紝鍚﹀垯浼氳秺鐣屾垨閿欎綅
     if (expect_len != actual_len)
     {
         return; 
     }
 
-    // 5. 对齐检查 (32字节对齐)
-    // 注意：这里检查的是主机指定的 expect_len
+    // 5. 瀵归綈妫€鏌?(32瀛楄妭瀵归綈)
+    // 娉ㄦ剰锛氳繖閲屾鏌ョ殑鏄富鏈烘寚瀹氱殑 expect_len
     if ((offset % 32 != 0) || (expect_len % 32 != 0))
     {
         return; 
     }
 
-    // 计算写入目标地址
+    // 璁＄畻鍐欏叆鐩爣鍦板潃
     uint32_t target_addr = OTA_DOWNLOAD_ADDR + offset;
     
     HAL_FLASH_Unlock();
-    Flash_ClearErrors(); // 清除标志
+    Flash_ClearErrors(); // 娓呴櫎鏍囧織
         
-    // 循环写入
+    // 寰幆鍐欏叆
     static uint32_t flash_word_buf[8]; // 32 bytes
     
-    // 使用主机指定的 expect_len 进行循环
+    // 浣跨敤涓绘満鎸囧畾鐨?expect_len 杩涜寰幆
     for (uint32_t i = 0; i < expect_len; i += 32)
     {
-        // 这里的 pData 已经是偏移过后的正确位置
+        // 杩欓噷鐨?pData 宸茬粡鏄亸绉昏繃鍚庣殑姝ｇ‘浣嶇疆
         memcpy(flash_word_buf, &pData[i], 32);
 
         if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_FLASHWORD, target_addr + i, (uint32_t)flash_word_buf) != HAL_OK)
@@ -537,9 +536,9 @@ static void Handle_OTA_Data(uint8_t dev_id, const uint8_t *rx_data, uint16_t fra
     }
     
     HAL_FLASH_Lock();
-    s_received_bytes += expect_len; // 累加接收字节数
+    s_received_bytes += expect_len; // 绱姞鎺ユ敹瀛楄妭鏁?
 
-    // 回复 ACK   
+    // 鍥炲 ACK   
 		static uint8_t tx[7];uint8_t *p = tx;
 		*p++ = dev_id; *p++ = CMD_OTA_DATA; *p++ = 0x02; *p++ = 0x4F; *p++ = 0x4B; // 4F4B OK
 		uint16_t crc = Modbus_CRC16(tx, (uint16_t)(p - tx));
@@ -548,12 +547,12 @@ static void Handle_OTA_Data(uint8_t dev_id, const uint8_t *rx_data, uint16_t fra
 		
 }
 
-// 3. 处理 OTA 结束命令
-// 主机发送: [DevID] [0x52] [Len(4B)] [WholeCRC32(4B)] [CRC16]
+// 3. 澶勭悊 OTA 缁撴潫鍛戒护
+// 涓绘満鍙戦€? [DevID] [0x52] [Len(4B)] [WholeCRC32(4B)] [CRC16]
 static void Handle_OTA_End(uint8_t dev_id, const uint8_t *rx_data)
 {
-	uint32_t fw_len = rd_be32(rx_data);     // 前4字节是长度
-    uint32_t host_crc = rd_be32(rx_data + 4); // 后4字节是上位机算好的 CRC32
+	uint32_t fw_len = rd_be32(rx_data);     // 鍓?瀛楄妭鏄暱搴?
+    uint32_t host_crc = rd_be32(rx_data + 4); // 鍚?瀛楄妭鏄笂浣嶆満绠楀ソ鐨?CRC32
 
 		if (fw_len == 0 || s_received_bytes != fw_len)
     {
@@ -562,47 +561,47 @@ static void Handle_OTA_End(uint8_t dev_id, const uint8_t *rx_data)
 		
 		uint32_t calc_crc = Calc_Flash_CRC32(OTA_DOWNLOAD_ADDR, fw_len);
 		
-		if (calc_crc != host_crc)//错误回复
+		if (calc_crc != host_crc)//閿欒鍥炲
     {
-        // Flash 里的数据和上位机发的不一致！
-        // 此时绝对不能重启，否则 Bootloader 会刷入损坏的固件
+        // Flash 閲岀殑鏁版嵁鍜屼笂浣嶆満鍙戠殑涓嶄竴鑷达紒
+        // 姝ゆ椂缁濆涓嶈兘閲嶅惎锛屽惁鍒?Bootloader 浼氬埛鍏ユ崯鍧忕殑鍥轰欢
         static uint8_t tx_err[8]; uint8_t *p = tx_err;
-        *p++ = dev_id; *p++ = CMD_OTA_END ; *p++ = 0x02; // 异常响应
-        *p++ = 0xBA; *p++ = 0xD1; // 错误码 BAD1
+        *p++ = dev_id; *p++ = CMD_OTA_END ; *p++ = 0x02; // 寮傚父鍝嶅簲
+        *p++ = 0xBA; *p++ = 0xD1; // 閿欒鐮?BAD1
         uint16_t crc = Modbus_CRC16(tx_err, 5);
         *p++ = (uint8_t)crc; *p++ = (uint8_t)(crc >> 8);
         uart3_send_dma(tx_err, 6);
         return; 
     }
-		//正确回ACK
+		//姝ｇ‘鍥濧CK
 		static uint8_t tx[7];uint8_t *p = tx;
 		*p++ = dev_id; *p++ = CMD_OTA_END; *p++ = 0x02; *p++ = 0x4F; *p++ = 0x4B; // 4F4B OK
 		uint16_t crc = Modbus_CRC16(tx, (uint16_t)(p - tx));
 		*p++ = (uint8_t)crc; *p++ = (uint8_t)(crc >> 8);
 	
-    // 使用阻塞发送，确保重启前发出去
+    // 浣跨敤闃诲鍙戦€侊紝纭繚閲嶅惎鍓嶅彂鍑哄幓
     HAL_UART_Transmit(&huart3, tx, 7, 100); 
 
-    // 2. 设置标志位 (请求 Bootloader 升级)
+    // 2. 璁剧疆鏍囧織浣?(璇锋眰 Bootloader 鍗囩骇)
 		Flash_SetOTAInfo(OTA_FLAG_UPDATE_NEEDED, fw_len, calc_crc);
 		
-    // 3. 重启
+    // 3. 閲嶅惎
     HAL_Delay(100);
     HAL_NVIC_SystemReset();
 }
 
-/**********************************帧处理**********************************/
-void Protocol_HandleRxFrame(const uint8_t *rx, uint16_t len, uint8_t local_address)
+/**********************************甯у鐞?*********************************/
+bool Protocol_HandleRxFrame(const uint8_t *rx, uint16_t len, uint8_t local_address)
 {
-    if (len < RX_MIN_LEN)                         { return; }
+    if (len < RX_MIN_LEN)                         { return false; }
     
     uint16_t rx_crc = rd_le16(&rx[len - 2U]);
     uint16_t calc_crc = Modbus_CRC16(rx, (uint16_t)(len - 2U));
     if (rx_crc != calc_crc) {
-        return;
+        return false;
     }
 
-    uint8_t dev_id = rx[0];                       // 提取请求中的设备地址
+    uint8_t dev_id = rx[0];                       // 鎻愬彇璇锋眰涓殑璁惧鍦板潃
     uint8_t cmd    = rx[1];
     const bool is_broadcast = (dev_id == 0x00);
     uint16_t wave_seq = 0U;
@@ -610,32 +609,33 @@ void Protocol_HandleRxFrame(const uint8_t *rx, uint16_t len, uint8_t local_addre
     
     if (cmd == CMD_WAVE_PACK) {
         if (len >= 8U) {
-            // 新协议：dev|cmd|seq(2B)|total(2B)|crc(2B)
+            // 鏂板崗璁細dev|cmd|seq(2B)|total(2B)|crc(2B)
             wave_seq = rd_be16(&rx[2]);
             wave_total = rd_be16(&rx[4]);
         } else {
-            return;
+            return false;
         }
     }
 
 		if (is_broadcast && cmd == CMD_DISCOVER) {
-        send_discover_rsp(local_address);  // 回 UID + 当前地址
-        return;
+        send_discover_rsp(local_address);  // 鍥?UID + 褰撳墠鍦板潃
+        return true;
     }
 		
 		if (is_broadcast && cmd == CMD_SET_ADDR) {
         HandleSetAddr_Broadcast(rx, len);
-				return;
+				return true;
     }
 		
 		if (is_broadcast && cmd == CMD_REBOOT) {
         HAL_Delay(100);
 				HAL_NVIC_SystemReset();
+        return true;
     }
 		
 		if (!is_broadcast && dev_id != local_address) 
 		{
-        return;
+        return false;
     }
 								
     switch (cmd)
@@ -652,4 +652,8 @@ void Protocol_HandleRxFrame(const uint8_t *rx, uint16_t len, uint8_t local_addre
 //        Protocol_SendNack(dev_id, cmd, PKT_ERR_CMD);            
         break;
     }
+    return true;
 } 
+
+
+

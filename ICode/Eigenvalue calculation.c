@@ -1,13 +1,15 @@
 #include "Eigenvalue calculation.h"
 #include "arm_const_structs.h"
 #include <string.h>  //  memcpy
+#include <math.h>
 #define MIN_VALID_PEAK_AMP  0.04f
 #define INT_ACC_DEADZONE  0.00f	//噪声积分门限
-static float g_hpf_alpha = 0.99f; // 高通系数
-static float g_lpf_alpha = 0.8f; // 低通系数
+#define LPF_TARGET_HZ      1000.0f
+#define LPF_BUTTERWORTH_Q  0.70710678f
 
 static arm_rfft_fast_instance_f32 S_rfft;
 static float32_t fftBuf[FFT_N_Z * 2]; // 复数运算缓冲区 (Z轴最长)
+static float g_filter_workbuf[FFT_N_Z];
 
 float g_z_offset_g  = 0.0f;   // 0g 偏移
 
@@ -15,32 +17,35 @@ volatile uint8_t g_LongCaptureState = 0; // 0:空闲, 1:录制中, 2:录制完�
 volatile uint8_t g_CaptureIndex = 0; // 当前段
 
 
-// 定义高低通状态结构体
+// 低通系数和状态分开存，便于运行时按采样率重算真正的 1kHz 截止
 typedef struct {
-    float last_in;
-    float last_out;
-} HPF_State_t;
+    float b0;
+    float b1;
+    float b2;
+    float a1;
+    float a2;
+} LPF_Coeff_t;
 
 typedef struct {
-    float last_out;
+    float x1;
+    float x2;
+    float y1;
+    float y2;
 } LPF_State_t;
 
-// 三轴独立状态（必须分开，否则互相干扰）
-static HPF_State_t hpf_state_x = {0.0f, 0.0f};
-static HPF_State_t hpf_state_y = {0.0f, 0.0f};
-static HPF_State_t hpf_state_z = {0.0f, 0.0f};
+static LPF_Coeff_t g_lpf_coeff = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 
-static LPF_State_t lpf_state_x = {0.0f};
-static LPF_State_t lpf_state_y = {0.0f};
-static LPF_State_t lpf_state_z = {0.0f};
+// 三轴独立低通状态，避免帧与帧之间串扰
+static LPF_State_t lpf_state_x = {0.0f, 0.0f, 0.0f, 0.0f};
+static LPF_State_t lpf_state_y = {0.0f, 0.0f, 0.0f, 0.0f};
+static LPF_State_t lpf_state_z = {0.0f, 0.0f, 0.0f, 0.0f};
 
 //计算初始化函数
 void Calc_Init(void)
 {
-    arm_rfft_fast_init_f32(&S_rfft, FFT_N_Z);      // 初始化 FFT 结构体   
+    arm_rfft_fast_init_f32(&S_rfft, FFT_N_Z);      // 初始化 FFT 结构体  
     //Vib_Filter_Init();     // 初始化滤波器
 		Algo_Update_LPF_Coeff(g_cfg_freq_hz);
-		Algo_Update_HPF_Coeff(g_cfg_freq_hz); // 10Hz 高通
 }
 
 /*void Vib_Filter_Init(void)
@@ -116,114 +121,116 @@ void Z_Calib_Z_Upright_Neg1G(float *gBuf, uint32_t N)
     g_z_offset_g += (mean_current - target_g);
 }
 
-//中值滤波
-static void Apply_Median_Filter_3(float *data, uint32_t len)
+// 更稳一点的滑窗中值滤波：5 点窗口、非递推，避免旧实现那种 IIR 式拖尾
+static float Median5(float v0, float v1, float v2, float v3, float v4)
 {
-    // 只处理中间部分
+    float v[5] = {v0, v1, v2, v3, v4};
 
-    float prev = data[0];
-    float curr = data[1];
-    float next;
-    
-    for(uint32_t i = 1; i < len - 1; i++)
-    {
-        next = data[i+1]; // 预读取下一个点
-        
-        // 核心逻辑：找 prev, curr, next 三者中的中间值
-        float median;
-        
-        if (prev > curr) {
-            if (curr > next) {
-                median = curr;      // prev > curr > next
-            } else if (prev > next) {
-                median = next;      // prev > next > curr
-            } else {
-                median = prev;      // next > prev > curr
-            }
-        } else { // curr >= prev
-            if (curr < next) {
-                median = curr;      // next > curr >= prev
-            } else if (prev < next) {
-                median = next;      // curr >= next > prev
-            } else {
-                median = prev;      // curr >= prev >= next
-            }
+    for (uint32_t i = 1; i < 5; ++i) {
+        float key = v[i];
+        int32_t j = (int32_t)i - 1;
+
+        while ((j >= 0) && (v[j] > key)) {
+            v[j + 1] = v[j];
+            --j;
         }
-        
-        // 更新当前点
-        data[i] = median;
-                
-        prev = data[i]; // 使用滤波后的值作为下一轮的 prev (IIR特性，去噪更强)
-        curr = next;    // 加载新的 curr
+        v[j + 1] = key;
     }
+
+    return v[2];
 }
 
-//低通系数更新
+static void Apply_Median_Filter_5(float *data, uint32_t len)
+{
+    if (len < 5U) {
+        return;
+    }
+
+    g_filter_workbuf[0] = data[0];
+    g_filter_workbuf[1] = data[1];
+
+    for (uint32_t i = 2; i < (len - 2U); ++i) {
+        g_filter_workbuf[i] = Median5(data[i - 2], data[i - 1], data[i], data[i + 1], data[i + 2]);
+    }
+
+    g_filter_workbuf[len - 2U] = data[len - 2U];
+    g_filter_workbuf[len - 1U] = data[len - 1U];
+    memcpy(data, g_filter_workbuf, len * sizeof(float));
+}
+
+// 低通系数更新：这里改成二阶 Butterworth，采样率足够时才是真正 1kHz 截止
 void Algo_Update_LPF_Coeff(uint16_t sample_rate_hz)
 {
-    // 目标截止频率: 1000Hz
-    const float cut_off_freq = 1000.0f;
-    const float pi_2 = 6.2831853f; // 2 * Pi
-    
-    if (sample_rate_hz == 0) return; // 防止除零
+    float fs;
+    float fc;
+    float max_fc;
+    float w0;
+    float cos_w0;
+    float sin_w0;
+    float alpha;
+    float a0;
 
-    // 公式: alpha = Fs / (Fs + 2*pi*Fc)
-    float denom = (float)sample_rate_hz + (pi_2 * cut_off_freq);
-    g_lpf_alpha = (float)sample_rate_hz / denom;
-    
+    if (sample_rate_hz == 0U) {
+        return;
+    }
+
+    fs = (float)sample_rate_hz;
+    fc = LPF_TARGET_HZ;
+
+    // 截止频率必须小于奈奎斯特，采样率太低时自动压到安全范围
+    max_fc = 0.45f * fs;
+    if (fc > max_fc) {
+        fc = max_fc;
+    }
+    if (fc < 1.0f) {
+        g_lpf_coeff.b0 = 1.0f;
+        g_lpf_coeff.b1 = 0.0f;
+        g_lpf_coeff.b2 = 0.0f;
+        g_lpf_coeff.a1 = 0.0f;
+        g_lpf_coeff.a2 = 0.0f;
+        memset(&lpf_state_x, 0, sizeof(lpf_state_x));
+        memset(&lpf_state_y, 0, sizeof(lpf_state_y));
+        memset(&lpf_state_z, 0, sizeof(lpf_state_z));
+        return;
+    }
+
+    w0 = 2.0f * M_PI * fc / fs;
+    cos_w0 = cosf(w0);
+    sin_w0 = sinf(w0);
+    alpha = sin_w0 / (2.0f * LPF_BUTTERWORTH_Q);
+    a0 = 1.0f + alpha;
+
+    g_lpf_coeff.b0 = ((1.0f - cos_w0) * 0.5f) / a0;
+    g_lpf_coeff.b1 = (1.0f - cos_w0) / a0;
+    g_lpf_coeff.b2 = g_lpf_coeff.b0;
+    g_lpf_coeff.a1 = (-2.0f * cos_w0) / a0;
+    g_lpf_coeff.a2 = (1.0f - alpha) / a0;
+
+    memset(&lpf_state_x, 0, sizeof(lpf_state_x));
+    memset(&lpf_state_y, 0, sizeof(lpf_state_y));
+    memset(&lpf_state_z, 0, sizeof(lpf_state_z));
 }
 
-// 1kHz 低通滤波器（带连续记忆）
 static void LowPassFilter_1kHz(float *data, uint32_t len, LPF_State_t *state)
 {
-    float val_prev = state->last_out; 
-    
-    for (uint32_t i = 0; i < len; i++)
+    float x0;
+    float y0;
+
+    for (uint32_t i = 0; i < len; ++i)
     {
-        float val_curr = data[i];
-        float val_out = g_lpf_alpha * val_prev + (1.0f - g_lpf_alpha) * val_curr;
-        data[i] = val_out;
-        val_prev = val_out;
+        x0 = data[i];
+        y0 = g_lpf_coeff.b0 * x0
+           + g_lpf_coeff.b1 * state->x1
+           + g_lpf_coeff.b2 * state->x2
+           - g_lpf_coeff.a1 * state->y1
+           - g_lpf_coeff.a2 * state->y2;
+
+        state->x2 = state->x1;
+        state->x1 = x0;
+        state->y2 = state->y1;
+        state->y1 = y0;
+        data[i] = y0;
     }
-    
-    state->last_out = val_prev;
-}
-
-//高通系数更新
-void Algo_Update_HPF_Coeff(uint16_t sample_rate_hz)
-{
-    const float cut_off_freq = 10.0f;
-    const float pi_2 = 6.2831853f; 
-
-    if (sample_rate_hz == 0) return;
-
-    // Alpha = RC / (RC + dt)
-    // RC = 1 / (2 * pi * fc)
-    // dt = 1 / Fs
-    // Alpha = Fs / (Fs + 2*pi*fc)
-    
-    float denom = (float)sample_rate_hz + (pi_2 * cut_off_freq);
-    g_hpf_alpha = (float)sample_rate_hz / denom;
-    
-}
-// 10Hz 高通滤波器（带连续记忆）
-static void HighPassFilter_10Hz(float *data, uint32_t len, HPF_State_t *state)
-{
-    float alpha = g_hpf_alpha; 
-    float last_in = state->last_in;
-    float last_out = state->last_out; 
-    
-    for(uint32_t i = 0; i < len; i++) {
-        float input = data[i];
-        float output = alpha * (last_out + input - last_in);
-        data[i] = output; 
-        last_out = output;
-        last_in = input;
-    }
-    
-    // 保存状态供下一帧使用
-    state->last_in = last_in;
-    state->last_out = last_out;
 }
 
 /*
@@ -464,43 +471,47 @@ void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf)
 {	  
     Eigen_Separate_And_Convert(pZBuf, pXYBuf);
 
-    Apply_Median_Filter_3(g_data_x, FFT_N_XY); // 去除尖峰毛刺 (修复峭度偏高)
-    HighPassFilter_10Hz(g_data_x, FFT_N_XY, &hpf_state_x); // 传入状态
+    // 波形上传只保留原始 Z 轴数据的去直流结果，不再叠加中值/低通处理
+    if (g_LongCaptureState == 1) {
+        uint32_t offset = g_CaptureIndex * FFT_N_Z;
+        memcpy(g_filter_workbuf, g_data_z, FFT_N_Z * sizeof(float));
+        Remove_DC(g_filter_workbuf, FFT_N_Z);
+        memcpy(&Tx_Wave_Buffer_Z[offset], g_filter_workbuf, FFT_N_Z * sizeof(float));
+        g_CaptureIndex++;
+        if (g_CaptureIndex >= LONG_WAVE_PKT)
+        {
+            g_CaptureIndex = 0;
+            g_LongCaptureState = 0;
+        }
+    }
+
+    Apply_Median_Filter_5(g_data_x, FFT_N_XY); // 5 点滑窗中值，抑制尖峰又不容易拖尾
+    Remove_DC(g_data_x, FFT_N_XY);             // 不做高通，只做去直流
+    LowPassFilter_1kHz(g_data_x, FFT_N_XY, &lpf_state_x);
     Calc_TimeDomain_Only(g_data_x, FFT_N_XY, &X_data);
-    LowPassFilter_1kHz(g_data_x, FFT_N_XY, &lpf_state_x);  // 传入状态
     if (FFT_N_XY <= FFT_N_Z * 2) { 
         memcpy(fftBuf, g_data_x, FFT_N_XY * sizeof(float)); 
-        Integrate_Acc_To_Vel(fftBuf, FFT_N_XY); //内部去直流
+        Integrate_Acc_To_Vel(fftBuf, FFT_N_XY); // 内部还会在积分后再去一次直流
         Calc_RMS_Only(fftBuf, FFT_N_XY, &X_data); 
     }
 		
-	Apply_Median_Filter_3(g_data_y, FFT_N_XY); // 去毛刺
-    HighPassFilter_10Hz(g_data_y, FFT_N_XY, &hpf_state_y);   // 去直流
+	Apply_Median_Filter_5(g_data_y, FFT_N_XY);
+    Remove_DC(g_data_y, FFT_N_XY);
+    LowPassFilter_1kHz(g_data_y, FFT_N_XY, &lpf_state_y);
     Calc_TimeDomain_Only(g_data_y, FFT_N_XY, &Y_data);
-    LowPassFilter_1kHz(g_data_y, FFT_N_XY, &lpf_state_y);    // 去噪
     if (FFT_N_XY <= FFT_N_Z * 2) {
         memcpy(fftBuf, g_data_y, FFT_N_XY * sizeof(float));
         Integrate_Acc_To_Vel(fftBuf, FFT_N_XY);
         Calc_RMS_Only(fftBuf, FFT_N_XY, &Y_data); 
     }
-		
-    if (g_LongCaptureState == 1) {
-        uint32_t offset = g_CaptureIndex * FFT_N_Z;
-        memcpy(&Tx_Wave_Buffer_Z[offset], g_data_z, FFT_N_Z * sizeof(float));
-        g_CaptureIndex++;
-        if (g_CaptureIndex >= LONG_WAVE_PKT) 
-        {
-            g_CaptureIndex = 0;
-            g_LongCaptureState = 0; 
-        }
-    }
-	
-    HighPassFilter_10Hz(g_data_z, FFT_N_Z, &hpf_state_z);
+
+    Apply_Median_Filter_5(g_data_z, FFT_N_Z);
+    Remove_DC(g_data_z, FFT_N_Z);
+    LowPassFilter_1kHz(g_data_z, FFT_N_Z, &lpf_state_z);
     Calc_TimeDomain_Only(g_data_z, FFT_N_Z,  &Z_data);
     Calc_FreqDomain_Z(g_data_z, FFT_N_Z, &Z_data);
     Calc_Envelope_Z(g_data_z, FFT_N_Z, &Z_data);
     memcpy(fftBuf, g_data_z, FFT_N_Z * sizeof(float));
-    LowPassFilter_1kHz(fftBuf, FFT_N_Z, &lpf_state_z);
     Integrate_Acc_To_Vel(fftBuf, FFT_N_Z);
     Calc_RMS_Only(fftBuf, FFT_N_Z, &Z_data);
 

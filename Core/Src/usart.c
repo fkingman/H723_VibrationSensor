@@ -21,10 +21,16 @@
 #include "usart.h"
 
 /* USER CODE BEGIN 0 */
+static volatile uint8_t s_uart3_idle_pending = 0U;
+static volatile uint16_t s_uart3_idle_len = 0U;
+static volatile uint32_t s_uart3_idle_tick = 0U;
+
+#define UART_IDLE_CONFIRM_MS 3U
+
 static void Uart3_StopRxDmaOnly(void)
 {
     if (HAL_IS_BIT_SET(huart3.Instance->CR3, USART_CR3_DMAR)) {
-        ATOMIC_CLEAR_BIT(huart3.Instance->CR3, USART_CR3_DMAR);
+				CLEAR_BIT(huart3.Instance->CR3, USART_CR3_DMAR);
     }
 
     if (huart3.hdmarx != NULL) {
@@ -33,6 +39,13 @@ static void Uart3_StopRxDmaOnly(void)
 
     huart3.RxState = HAL_UART_STATE_READY;
     huart3.ReceptionType = HAL_UART_RECEPTION_STANDARD;
+}
+
+static void Uart3_ClearIdlePending(void)
+{
+    s_uart3_idle_pending = 0U;
+    s_uart3_idle_len = 0U;
+    s_uart3_idle_tick = 0U;
 }
 /* USER CODE END 0 */
 
@@ -205,34 +218,64 @@ void USAR_UART_IDLECallback(UART_HandleTypeDef *huart)
 {
 	if(huart->Instance == USART3)
 	{
-		// 停止本次DMA传输
-		Uart3_StopRxDmaOnly();
-		// 计算接收到的数据长度
-    uint16_t recv_len = RX_DMA_BUF_SZ - __HAL_DMA_GET_COUNTER(&hdma_usart3_rx);
-		if (recv_len == 0) {
-        // 上电/抖动导致的“空闲但无数据”，忽略
-        Uart3_RxStart();            
+		uint16_t recv_len = RX_DMA_BUF_SZ - __HAL_DMA_GET_COUNTER(&hdma_usart3_rx);
+
+		if (recv_len == 0U) {
+        Uart3_ClearIdlePending();
         return;
     }
-//		HAL_UART_Transmit(&huart2,dma_receive_buff,data_length,0x200);                     
-		if (recv_len <= RX_FRAME_MAX) 
-		{
-				memcpy(rx_frame_buf, rx_dma_buf, recv_len);  
-				rx_frame_len   = recv_len;
-				rx_frame_ready = 1;
-		}
-		else {            
-				rx_frame_ready = 0;/* 溢出：丢帧或置错误标志 */
-		}
+
+    s_uart3_idle_len = recv_len;
+    s_uart3_idle_tick = HAL_GetTick();
+    s_uart3_idle_pending = 1U;
 	}
-//  HAL_UART_Receive_DMA(&huart3, rx_dma_buf, RX_DMA_BUF_SZ);
-		Uart3_RxStart();
 }
 
 void Uart3_RecoverFromError(void)
 {
     __HAL_UART_CLEAR_PEFLAG(&huart3);
+    Uart3_ClearIdlePending();
     Uart3_StopRxDmaOnly();
+    Uart3_RxStart();
+}
+
+void Uart3_ServiceRxIdleTimeout(void)
+{
+    uint16_t recv_len;
+
+    if (s_uart3_idle_pending == 0U) {
+        return;
+    }
+
+    recv_len = RX_DMA_BUF_SZ - __HAL_DMA_GET_COUNTER(&hdma_usart3_rx);
+    if (recv_len == 0U) {
+        Uart3_ClearIdlePending();
+        return;
+    }
+
+    if (recv_len != s_uart3_idle_len) {
+        s_uart3_idle_len = recv_len;
+        s_uart3_idle_tick = HAL_GetTick();
+        return;
+    }
+
+    if ((HAL_GetTick() - s_uart3_idle_tick) < UART_IDLE_CONFIRM_MS) {
+        return;
+    }
+
+    Uart3_StopRxDmaOnly();
+    recv_len = RX_DMA_BUF_SZ - __HAL_DMA_GET_COUNTER(&hdma_usart3_rx);
+    Uart3_ClearIdlePending();
+
+    if ((recv_len == 0U) || (recv_len > RX_FRAME_MAX)) {
+        rx_frame_ready = 0U;
+        Uart3_RxStart();
+        return;
+    }
+
+    memcpy(rx_frame_buf, rx_dma_buf, recv_len);
+    rx_frame_len = recv_len;
+    rx_frame_ready = 1U;
     Uart3_RxStart();
 }
 
@@ -257,3 +300,5 @@ void On_IDLE(UART_HandleTypeDef *huart)
 	
 }
 /* USER CODE END 1 */
+
+
