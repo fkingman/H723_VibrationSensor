@@ -301,6 +301,25 @@ static void send_discover_rsp(uint8_t cur_addr)
     uart3_send_dma(tx, packet_len); 
 }
 
+//dev_id | CMD_VERSION | 0x02 | version | sensor_type | crc_l | crc_h
+static void send_version_pkt(uint8_t dev_id)
+{
+    static uint8_t tx[7];
+    uint8_t *p = tx;
+
+    *p++ = dev_id;
+    *p++ = CMD_VERSION;
+    *p++ = 0x02;
+    *p++ = APP_FW_VERSION;
+    *p++ = APP_SENSOR_TYPE;
+
+    uint16_t crc = Modbus_CRC16(tx, (uint16_t)(p - tx));
+    *p++ = (uint8_t)(crc & 0xFF);
+    *p++ = (uint8_t)(crc >> 8);
+
+    uart3_send_dma(tx, (uint16_t)(p - tx));
+}
+
 /**********************************閰嶇疆鍦板潃搴旂瓟**********************************/
 // 鍙澶х UID锛孋RC 浠嶅皬绔?
 static bool HandleSetAddr_Broadcast(const uint8_t* rx, uint16_t flen)
@@ -645,6 +664,7 @@ bool Protocol_HandleRxFrame(const uint8_t *rx, uint16_t len, uint8_t local_addre
 		case CMD_WAVE_PACK:	send_wave_pkt(dev_id, Tx_Wave_Buffer_Z, wave_seq, wave_total); break;
 		case CMD_CONFIG:Config_ParseAndApply_Freq(rx);Cfg_SendAck(dev_id);break;
     case CMD_CALIBRATION:Z_Calib_Z_Upright_Neg1G(g_data_z, 100);CALIBRATION_Config_SendAck(dev_id); break;
+		case CMD_VERSION:send_version_pkt(dev_id);break;
 		case CMD_OTA_START:	Handle_OTA_Start(dev_id, &rx[2]);break;
 		case CMD_OTA_DATA:Handle_OTA_Data(dev_id, &rx[2], len - 4);break;
 		case CMD_OTA_END:	Handle_OTA_End(dev_id, &rx[2]);break;

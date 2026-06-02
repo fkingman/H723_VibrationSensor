@@ -6,7 +6,10 @@
 #include <stdbool.h>
 
 #define OTA_DOWNLOAD_ADDR  0x08080000 // OTA下载区
-
+#define APP_FW_VERSION                0x00
+#define FLASH_CFG_SENSOR_HIGH_PREC     0x00
+#define FLASH_CFG_SENSOR_LOW_COST      0x01
+#define APP_SENSOR_TYPE  FLASH_CFG_SENSOR_HIGH_PREC
 /*
 XY: mean RMS PP 
 Z:	mean RMS PP Displacement_PP Envelope_Vrms Envelope_Peak
@@ -22,6 +25,7 @@ Z:	mean RMS PP Displacement_PP Envelope_Vrms Envelope_Peak
 #define CMD_SET_ADDR  	 0x42   	 /* 主站广播给某uid配置地址*/
 #define CMD_CALIBRATION  0x60   	 /* 校准请求*/
 #define CMD_WRONG        0x80     /* 错误 */
+#define CMD_VERSION      0x49
 #define CMD_OTA_START    0x50   // 开始升级 (参数: 固件总长度)
 #define CMD_OTA_DATA     0x51   // 传输数据 (参数: 偏移量 + 数据)
 #define CMD_OTA_END      0x52   // 结束升级 (参数: CRC校验 / 直接重启)
