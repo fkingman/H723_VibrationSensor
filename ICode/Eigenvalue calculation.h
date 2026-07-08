@@ -7,7 +7,9 @@
 #include <math.h>
 #include "modbus_rtu.h"
 
+#ifndef ARM_MATH_CM7
 #define ARM_MATH_CM7
+#endif
 
 #define UINT32_T_BYTE													 4
 #define UINT16_T_BYTE													 2
@@ -55,7 +57,7 @@ void Algo_Update_LPF_Coeff(uint16_t sample_rate_hz);
 //void Calc_TimeDomain_Only(float32_t *data, uint32_t len, AxisFeatureValue *result);
 //void Calc_FreqDomain_Z(float32_t *data, uint32_t len);
 //void Calc_Envelope_Z(float32_t *data, uint32_t len);
-void Z_Calib_Z_Upright_Neg1G(float *gBuf, uint32_t N);
+void Z_Calib_Z_Upright_Neg1G(void);
 float Tempetature_Dis(void);
 void print_g_data(float *buf, uint32_t N);
 void print_FEATURE();

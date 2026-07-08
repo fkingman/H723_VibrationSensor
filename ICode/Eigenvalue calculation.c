@@ -3,8 +3,9 @@
 #include <string.h>  //  memcpy
 #include <math.h>
 #define MIN_VALID_PEAK_AMP  0.04f
-#define INT_ACC_DEADZONE  0.00f	//噪声积分门限
-#define LPF_TARGET_HZ      1000.0f
+// 1 kHz 是特征测量带宽上限，不应同时作为 Butterworth 的 -3 dB 截止点。
+// 截止点放到 3 kHz，使默认 25.6 kHz 采样下 1 kHz 幅值衰减小于约 1%。
+#define LPF_TARGET_HZ      3000.0f
 #define LPF_BUTTERWORTH_Q  0.70710678f
 
 static arm_rfft_fast_instance_f32 S_rfft;
@@ -12,6 +13,8 @@ static float32_t fftBuf[FFT_N_Z * 2]; // 复数运算缓冲区 (Z轴最长)
 static float g_filter_workbuf[FFT_N_Z];
 
 float g_z_offset_g  = 0.0f;   // 0g 偏移
+static float g_last_z_mean_g = 0.0f;
+static uint8_t g_last_z_mean_valid = 0U;
 
 volatile uint8_t g_LongCaptureState = 0; // 0:空闲, 1:录制中, 2:录制完成
 volatile uint8_t g_CaptureIndex = 0; // 当前段
@@ -80,10 +83,15 @@ static inline float XYcode_to_g(uint16_t code)
 //(uint16 -> float)
 void Eigen_Separate_And_Convert(uint16_t *pZBuf, uint16_t *pXYBuf)
 {
+    float z_sum = 0.0f;
+
     // --- 处理 Z 轴 ---
     for (uint32_t i = 0; i < FFT_N_Z; i++) {
         g_data_z[i] = Zcode_to_g(pZBuf[i]);
+        z_sum += g_data_z[i];
     }
+    g_last_z_mean_g = z_sum / (float)FFT_N_Z;
+    g_last_z_mean_valid = 1U;
 
     // --- 处理 XY 轴 (交错拆分) ---
     for (uint32_t i = 0; i < FFT_N_XY; i++) {
@@ -105,60 +113,37 @@ static void Remove_DC(float *data, uint32_t len)
     }
 }
 
-void Z_Calib_Z_Upright_Neg1G(float *gBuf, uint32_t N)
+void Z_Calib_Z_Upright_Neg1G(void)
 {
-    float sum_g = 0.0f;
-
-    for (uint32_t i = 0; i < N; ++i)
-    {
-        sum_g += gBuf[i];
+    if (g_last_z_mean_valid != 0U) {
+        const float target_g = -1.0f;
+        g_z_offset_g += (g_last_z_mean_g - target_g);
+        g_last_z_mean_valid = 0U;
     }
-
-    float mean_current = sum_g / (float)N;
-
-    const float target_g = -1.0f;
-  
-    g_z_offset_g += (mean_current - target_g);
 }
 
-// 更稳一点的滑窗中值滤波：5 点窗口、非递推，避免旧实现那种 IIR 式拖尾
-static float Median5(float v0, float v1, float v2, float v3, float v4)
+static float Calc_Mean(const float *data, uint32_t len)
 {
-    float v[5] = {v0, v1, v2, v3, v4};
-
-    for (uint32_t i = 1; i < 5; ++i) {
-        float key = v[i];
-        int32_t j = (int32_t)i - 1;
-
-        while ((j >= 0) && (v[j] > key)) {
-            v[j + 1] = v[j];
-            --j;
-        }
-        v[j + 1] = key;
+    float sum = 0.0f;
+    for (uint32_t i = 0; i < len; ++i) {
+        sum += data[i];
     }
-
-    return v[2];
+    return sum / (float)len;
 }
 
-static void Apply_Median_Filter_5(float *data, uint32_t len)
+static float Calc_PeakToPeak(const float *data, uint32_t len)
 {
-    if (len < 5U) {
-        return;
+    float min_val = data[0];
+    float max_val = data[0];
+
+    for (uint32_t i = 1; i < len; ++i) {
+        if (data[i] < min_val) min_val = data[i];
+        if (data[i] > max_val) max_val = data[i];
     }
-
-    g_filter_workbuf[0] = data[0];
-    g_filter_workbuf[1] = data[1];
-
-    for (uint32_t i = 2; i < (len - 2U); ++i) {
-        g_filter_workbuf[i] = Median5(data[i - 2], data[i - 1], data[i], data[i + 1], data[i + 2]);
-    }
-
-    g_filter_workbuf[len - 2U] = data[len - 2U];
-    g_filter_workbuf[len - 1U] = data[len - 1U];
-    memcpy(data, g_filter_workbuf, len * sizeof(float));
+    return max_val - min_val;
 }
 
-// 低通系数更新：这里改成二阶 Butterworth，采样率足够时才是真正 1kHz 截止
+// 低通系数更新：二阶 Butterworth；低采样率下自动限制到 0.45 * Fs。
 void Algo_Update_LPF_Coeff(uint16_t sample_rate_hz)
 {
     float fs;
@@ -211,7 +196,7 @@ void Algo_Update_LPF_Coeff(uint16_t sample_rate_hz)
     memset(&lpf_state_z, 0, sizeof(lpf_state_z));
 }
 
-static void LowPassFilter_1kHz(float *data, uint32_t len, LPF_State_t *state)
+static void LowPassFilter(float *data, uint32_t len, LPF_State_t *state)
 {
     float x0;
     float y0;
@@ -253,20 +238,17 @@ static inline CFFT_PTR_T pick_cfft_u32(uint32_t N)
 void Calc_TimeDomain_Only(float32_t *data, uint32_t len, AxisFeatureValue *result)
 {
     float32_t sum = 0.0f;
-    float32_t sumSq = 0.0f;
     float32_t minVal = data[0];
     float32_t maxVal = data[0];
-    float32_t mean, rms, pp, kurt;
+    float32_t mean, pp, kurt;
 
     for (uint32_t i = 0; i < len; i++) {
         float32_t val = data[i];
         sum += val;
-        sumSq += val * val;
         if (val < minVal) minVal = val;
         if (val > maxVal) maxVal = val;
     }
     mean = sum / (float32_t)len;
-    rms = sqrtf(sumSq / (float32_t)len); // 这里是包含直流分量的 RMS
     pp = maxVal - minVal;
 
     // 第二遍循环：计算峭度 (Kurtosis) 需要中心矩
@@ -287,54 +269,59 @@ void Calc_TimeDomain_Only(float32_t *data, uint32_t len, AxisFeatureValue *resul
         kurt = ((float32_t)len * m4) / (m2 * m2);
     }
     result->mean = mean;
-    //result->rms  = rms;
     result->pp   = pp;
     result->kurt = kurt;
 }
-//积分速度mm/s
-static void Integrate_Acc_To_Vel(float *data, uint32_t len)
-{
-    uint16_t freq = g_cfg_freq_hz; // 获取当前采样率
-    if (freq == 0) return;
 
-    float dt = 1.0f / (float)freq;
-    float vel = 0.0f;
-    float val_prev = data[0]; 
-    
-    // 重力加速度常数: 1g ≈ 9806.65 mm/s²
-    const float G_TO_MM_S2 = 9806.65f; 
-	
-    for (uint32_t i = 0; i < len; i++) {
-        float val_curr = data[i];
-        
-				if (fabsf(val_curr) < INT_ACC_DEADZONE) { //噪声积分门限
-            val_curr = 0.0f;
-        }
-				
-        // 梯形积分公式
-        vel += (val_prev + val_curr) * 0.5f * dt * G_TO_MM_S2;
-        val_prev = val_curr;
-        
-        data[i] = vel;
+// 在频域按 10~1000 Hz 积分，避免时域积分被低频偏置和帧边界放大。
+static void Calc_Velocity_RMS(float *data, uint32_t len, AxisFeatureValue *result)
+{
+    const float g_to_mm_s2 = 9806.65f;
+    const float fs = (float)g_cfg_freq_hz;
+    float velocity_mean_square = 0.0f;
+
+    if ((fs <= 0.0f) || (len == 0U) ||
+        (len * 2U > sizeof(fftBuf) / sizeof(fftBuf[0]))) {
+        result->rms = 0.0f;
+        return;
     }
 
-    // 积分后必须再次去直流，消除积分漂移
-    Remove_DC(data, len);
-}
-//速度rms
-static float Calc_RMS_Only(float *data, uint32_t len, AxisFeatureValue *result)
-{
-    float sumSq = 0.0f;
-    for (uint32_t i = 0; i < len; i++) {
-        sumSq += data[i] * data[i];
+    memcpy(&fftBuf[len], data, len * sizeof(float));
+    arm_rfft_fast_f32(&S_rfft, &fftBuf[len], fftBuf, 0);
+
+    uint32_t first_bin = (uint32_t)ceilf(MIN_FREQ_HZ * (float)len / fs);
+    uint32_t last_bin = (uint32_t)floorf(MAX_FREQ_HZ * (float)len / fs);
+    if (first_bin < 1U) first_bin = 1U;
+    if (last_bin >= len / 2U) last_bin = len / 2U - 1U;
+    if (first_bin > last_bin) {
+        result->rms = 0.0f;
+        return;
     }
-    result->rms = sqrtf(sumSq / (float)len);
+
+    for (uint32_t k = first_bin; k <= last_bin; ++k) {
+        float re = fftBuf[2U * k];
+        float im = fftBuf[2U * k + 1U];
+        float acc_peak_g = (2.0f / (float)len) * sqrtf(re * re + im * im);
+        float freq_hz = (float)k * fs / (float)len;
+        float vel_peak = acc_peak_g * g_to_mm_s2 / (2.0f * M_PI * freq_hz);
+        velocity_mean_square += 0.5f * vel_peak * vel_peak;
+    }
+
+    result->rms = sqrtf(velocity_mean_square);
 }
 
 
 void Calc_FreqDomain_Z(float32_t *data, uint32_t len, AxisFeatureValue *result)
 {
     uint16_t current_fs = g_cfg_freq_hz;
+    float32_t window_sum = 0.0f;
+
+    if ((current_fs == 0U) || (len < 2U)) {
+        result->peakFreq = 0.0f;
+        result->peakAmp = 0.0f;
+        result->amp2x = 0.0f;
+        return;
+    }
 
     // 保护现场
     // arm_rfft_fast_f32 会破坏输入数据
@@ -342,7 +329,13 @@ void Calc_FreqDomain_Z(float32_t *data, uint32_t len, AxisFeatureValue *result)
          // 理论上不会发生，除非 len 传错了，加个保险
          return; 
     }
-    memcpy(&fftBuf[len], data, len * sizeof(float32_t));
+    // Hann 窗降低非整数周期截断造成的频谱泄漏；window_sum 用于恢复幅值。
+    for (uint32_t i = 0; i < len; ++i) {
+        float32_t w = 0.5f - 0.5f * cosf(2.0f * M_PI * (float32_t)i /
+                                        (float32_t)(len - 1U));
+        fftBuf[len + i] = data[i] * w;
+        window_sum += w;
+    }
 
     arm_rfft_fast_f32(&S_rfft, &fftBuf[len], fftBuf, 0);
  
@@ -361,8 +354,8 @@ void Calc_FreqDomain_Z(float32_t *data, uint32_t len, AxisFeatureValue *result)
     fftBuf[0] = dc_val;
     
     // 归一化
-    fftBuf[0] /= (float32_t)len;
-    float32_t norm = 2.0f / (float32_t)len;
+    fftBuf[0] /= window_sum;
+    float32_t norm = 2.0f / window_sum;
     
     for (uint32_t i = 1; i < len / 2; i++) {
         fftBuf[i] *= norm;
@@ -372,14 +365,21 @@ void Calc_FreqDomain_Z(float32_t *data, uint32_t len, AxisFeatureValue *result)
     float32_t maxAmp = 0.0f;
     uint32_t maxIndex = 0;
     
-    for (uint32_t i = 3; i < len / 2; i++) {
+    uint32_t first_bin = (uint32_t)ceilf(MIN_FREQ_HZ * (float32_t)len /
+                                         (float32_t)current_fs);
+    uint32_t last_bin = (uint32_t)floorf(MAX_FREQ_HZ * (float32_t)len /
+                                         (float32_t)current_fs);
+    if (first_bin < 1U) first_bin = 1U;
+    if (last_bin >= len / 2U) last_bin = len / 2U - 1U;
+
+    for (uint32_t i = first_bin; i <= last_bin; i++) {
         if (fftBuf[i] > maxAmp) {
             maxAmp = fftBuf[i];
             maxIndex = i;
         }
     }
     
-		if (maxAmp < MIN_VALID_PEAK_AMP) {
+		if ((first_bin > last_bin) || (maxAmp < MIN_VALID_PEAK_AMP)) {
         // 如果最大值都没超过门限，说明是静置噪音
         result->peakFreq = 0.0f; // 强制置零
         result->peakAmp  = 0.0f; // 或者保留 maxAmp 作为底噪参考，看你需求
@@ -392,13 +392,13 @@ void Calc_FreqDomain_Z(float32_t *data, uint32_t len, AxisFeatureValue *result)
     uint32_t index_2x = maxIndex * 2;
     
 		if (index_2x > 1 && index_2x < (len/2 - 1)) {
-				float32_t a = data[index_2x - 1];
-				float32_t b = data[index_2x];
-				float32_t c = data[index_2x + 1];
+				float32_t a = fftBuf[index_2x - 1];
+				float32_t b = fftBuf[index_2x];
+				float32_t c = fftBuf[index_2x + 1];
 				// 取三者最大
 				amp_2x = (a > b) ? ((a > c) ? a : c) : ((b > c) ? b : c);
 		} else if (index_2x < len/2) {
-				amp_2x = data[index_2x];
+				amp_2x = fftBuf[index_2x];
 		}
 
     result->peakFreq = peak_freq; 
@@ -445,14 +445,13 @@ void Calc_Envelope_Z(float32_t *data, uint32_t len, AxisFeatureValue *result)
     // Envelope = sqrt( x(t)^2 + h(t)^2 )
     float32_t sumSq = 0.0f;
     float32_t maxEnv = 0.0f;
-    float32_t inv_len = 1.0f / (float32_t)len; // 用于 IFFT 结果的归一化
-
     for (uint32_t i = 0; i < len; i++) {
         // x 从原始 data 读取 (现在它是干净的)
         float32_t x = data[i];     
         
         // h 从 RIFFT 结果读取 (在 fftBuf 后半段)              
-        float32_t h = fftBuf[len + i] * inv_len; 
+        // CMSIS-DSP 的 RIFFT 已在内部完成归一化，不能再次除以 len。
+        float32_t h = fftBuf[len + i];
 
         // 计算瞬时包络
         float32_t envVal = sqrtf(x * x + h * h);
@@ -468,8 +467,21 @@ void Calc_Envelope_Z(float32_t *data, uint32_t len, AxisFeatureValue *result)
 
 	
 void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf)
-{	  
+{
+    float mean_x;
+    float mean_y;
+    float mean_z;
+    float raw_pp_x;
+    float raw_pp_y;
+    float raw_pp_z;
+
     Eigen_Separate_And_Convert(pZBuf, pXYBuf);
+
+    // PP 必须反映真实采样波形，在任何低通处理之前计算。
+    // 去直流只改变整体偏置，不改变峰峰值，因此它也与上传的去直流波形一致。
+    raw_pp_x = Calc_PeakToPeak(g_data_x, FFT_N_XY);
+    raw_pp_y = Calc_PeakToPeak(g_data_y, FFT_N_XY);
+    raw_pp_z = Calc_PeakToPeak(g_data_z, FFT_N_Z);
 
     // 波形上传只保留原始 Z 轴数据的去直流结果，不再叠加中值/低通处理
     if (g_LongCaptureState == 1) {
@@ -485,35 +497,31 @@ void Process_Data(uint16_t *pZBuf, uint16_t *pXYBuf)
         }
     }
 
-    Apply_Median_Filter_5(g_data_x, FFT_N_XY); // 5 点滑窗中值，抑制尖峰又不容易拖尾
+    mean_x = Calc_Mean(g_data_x, FFT_N_XY);
     Remove_DC(g_data_x, FFT_N_XY);             // 不做高通，只做去直流
-    LowPassFilter_1kHz(g_data_x, FFT_N_XY, &lpf_state_x);
+    LowPassFilter(g_data_x, FFT_N_XY, &lpf_state_x);
     Calc_TimeDomain_Only(g_data_x, FFT_N_XY, &X_data);
-    if (FFT_N_XY <= FFT_N_Z * 2) { 
-        memcpy(fftBuf, g_data_x, FFT_N_XY * sizeof(float)); 
-        Integrate_Acc_To_Vel(fftBuf, FFT_N_XY); // 内部还会在积分后再去一次直流
-        Calc_RMS_Only(fftBuf, FFT_N_XY, &X_data); 
-    }
+    X_data.mean = mean_x;
+    X_data.pp = raw_pp_x;
+    Calc_Velocity_RMS(g_data_x, FFT_N_XY, &X_data);
 		
-	Apply_Median_Filter_5(g_data_y, FFT_N_XY);
+    mean_y = Calc_Mean(g_data_y, FFT_N_XY);
     Remove_DC(g_data_y, FFT_N_XY);
-    LowPassFilter_1kHz(g_data_y, FFT_N_XY, &lpf_state_y);
+    LowPassFilter(g_data_y, FFT_N_XY, &lpf_state_y);
     Calc_TimeDomain_Only(g_data_y, FFT_N_XY, &Y_data);
-    if (FFT_N_XY <= FFT_N_Z * 2) {
-        memcpy(fftBuf, g_data_y, FFT_N_XY * sizeof(float));
-        Integrate_Acc_To_Vel(fftBuf, FFT_N_XY);
-        Calc_RMS_Only(fftBuf, FFT_N_XY, &Y_data); 
-    }
+    Y_data.mean = mean_y;
+    Y_data.pp = raw_pp_y;
+    Calc_Velocity_RMS(g_data_y, FFT_N_XY, &Y_data);
 
-    Apply_Median_Filter_5(g_data_z, FFT_N_Z);
+    mean_z = Calc_Mean(g_data_z, FFT_N_Z);
     Remove_DC(g_data_z, FFT_N_Z);
-    LowPassFilter_1kHz(g_data_z, FFT_N_Z, &lpf_state_z);
+    LowPassFilter(g_data_z, FFT_N_Z, &lpf_state_z);
     Calc_TimeDomain_Only(g_data_z, FFT_N_Z,  &Z_data);
+    Z_data.mean = mean_z;
+    Z_data.pp = raw_pp_z;
     Calc_FreqDomain_Z(g_data_z, FFT_N_Z, &Z_data);
     Calc_Envelope_Z(g_data_z, FFT_N_Z, &Z_data);
-    memcpy(fftBuf, g_data_z, FFT_N_Z * sizeof(float));
-    Integrate_Acc_To_Vel(fftBuf, FFT_N_Z);
-    Calc_RMS_Only(fftBuf, FFT_N_Z, &Z_data);
+    Calc_Velocity_RMS(g_data_z, FFT_N_Z, &Z_data);
 
 }
 

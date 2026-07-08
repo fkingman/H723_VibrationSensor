@@ -663,7 +663,7 @@ bool Protocol_HandleRxFrame(const uint8_t *rx, uint16_t len, uint8_t local_addre
 		case CMD_WAVE:Create_Wave_Snapshot();send_wave_ack(dev_id); break;
 		case CMD_WAVE_PACK:	send_wave_pkt(dev_id, Tx_Wave_Buffer_Z, wave_seq, wave_total); break;
 		case CMD_CONFIG:Config_ParseAndApply_Freq(rx);Cfg_SendAck(dev_id);break;
-    case CMD_CALIBRATION:Z_Calib_Z_Upright_Neg1G(g_data_z, 100);CALIBRATION_Config_SendAck(dev_id); break;
+    case CMD_CALIBRATION:Z_Calib_Z_Upright_Neg1G();CALIBRATION_Config_SendAck(dev_id); break;
 		case CMD_VERSION:send_version_pkt(dev_id);break;
 		case CMD_OTA_START:	Handle_OTA_Start(dev_id, &rx[2]);break;
 		case CMD_OTA_DATA:Handle_OTA_Data(dev_id, &rx[2], len - 4);break;
